@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'hackyeah-compose'
+
+include ':contract', ':backend', ':shared', ':jvm-app', ':wasm-app'
+
+// Android needs a fully installed SDK with accepted licenses: enable with -Pandroid=true
+if (providers.gradleProperty('android').orNull == 'true') {
+    include ':android-app'
+}

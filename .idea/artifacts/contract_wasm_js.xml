@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="contract-wasm-js">
+    <output-path>$PROJECT_DIR$/contract/build/libs</output-path>
+    <root id="archive" name="contract-wasm-js.jar" />
+  </artifact>
+</component>

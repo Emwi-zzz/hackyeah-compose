@@ -50,6 +50,8 @@ fun Route.authApi(users: UserRepository, jwt: JwtService) {
             val user = users.findByUsername(req.username)
             // Hash a dummy when the user is missing so timing does not reveal which usernames exist
             val ok = PasswordHasher.verify(req.password, user?.passwordHash ?: DUMMY_HASH)
+            println(ok)
+            println(user)
             if (user == null || !ok) {
                 throw ApiException(HttpStatusCode.Unauthorized, "invalid_credentials", "Invalid username or password")
             }

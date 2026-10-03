@@ -1,0 +1,39 @@
+plugins {
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+def withAndroid = providers.gradleProperty('android').orNull == 'true'
+if (withAndroid) apply plugin: 'com.android.library'
+
+kotlin {
+    jvmToolchain(17)
+    jvm()
+    wasmJs { browser() }
+    if (withAndroid) androidTarget()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        commonMain {
+            kotlin.srcDir('src')
+            dependencies {
+                api(libs.serialization.json)
+            }
+        }
+        commonTest {
+            kotlin.srcDir('test')
+            dependencies {
+                implementation(kotlin('test'))
+            }
+        }
+    }
+}
+
+if (withAndroid) {
+    android {
+        namespace = 'hackyeah.contract'
+        compileSdk = 36
+        defaultConfig { minSdk = 24 }
+    }
+}

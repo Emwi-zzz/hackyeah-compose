@@ -1,0 +1,53 @@
+plugins {
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose)
+}
+
+def withAndroid = providers.gradleProperty('android').orNull == 'true'
+if (withAndroid) apply plugin: 'com.android.library'
+
+kotlin {
+    jvmToolchain(17)
+    jvm()
+    wasmJs { browser() }
+    if (withAndroid) androidTarget()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        commonMain {
+            kotlin.srcDir('src')
+            dependencies {
+                api(project(':contract'))
+                api(compose.foundation)
+                api(compose.material3)
+                api(compose.components.resources)
+            }
+        }
+        commonTest {
+            kotlin.srcDir('test')
+            dependencies {
+                implementation(kotlin('test'))
+            }
+        }
+        jvmMain { kotlin.srcDir('src@jvm') }
+        jvmTest { kotlin.srcDir('test@jvm') }
+        wasmJsMain { kotlin.srcDir('src@wasmJs') }
+        iosMain { kotlin.srcDir('src@ios') }
+        iosTest { kotlin.srcDir('test@ios') }
+        if (withAndroid) {
+            androidMain { kotlin.srcDir('src@android') }
+            androidUnitTest { kotlin.srcDir('test@android') }
+        }
+    }
+}
+
+if (withAndroid) {
+    android {
+        namespace = 'hackyeah.shared'
+        compileSdk = 36
+        defaultConfig { minSdk = 24 }
+    }
+}
+

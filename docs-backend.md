@@ -18,12 +18,12 @@ Env: `DB_URL` (default `jdbc:postgresql://localhost:5433/malls`), `DB_USER`, `DB
 
 ## Run
 0. Database: `docker compose up -d --wait` (Postgres 16 on host port 5433, to avoid clashing with a local 5432).
-1. Backend (port 8080, override with `PORT`/`HOST`): `.\kotlin.bat run -m backend`
-2. Frontend: `.\kotlin.bat run -m jvm-app` (default `BackendConfig.baseUrl = http://localhost:8080`).
+1. Backend (port 8080, override with `PORT`/`HOST`): `.\gradlew.bat :backend:run`
+2. Frontend: `.\gradlew.bat :jvm-app:run` (default `BackendConfig.baseUrl = http://localhost:8080`).
    - Android emulator: set `BackendConfig.baseUrl = "http://10.0.2.2:8080"` before `Screen()`.
    - Real device: use the LAN IP of the backend machine.
    - Wasm: the backend sends CORS headers, but `PlatformHttp` for wasmJs is still a stub (returns null) — it must be implemented with `fetch` for the web app to get data.
-3. Tests: `.\kotlin.bat test -m contract -m backend -m shared -p jvm` (backend tests start PostgreSQL via Testcontainers; Docker must be running).
+3. Tests: `.\gradlew.bat :contract:jvmTest :shared:jvmTest :backend:test` (backend tests start PostgreSQL via Testcontainers; Docker must be running).
 
 ## Flow
 1. On start `MapState` calls `GET /malls`, then `GET /malls/{id}` for every mall (floor plans, stores) and `GET /malls/{id}/locations`.
@@ -72,7 +72,7 @@ Usernames: 3-32 chars `[A-Za-z0-9_.-]`, case-insensitive. Admin changes take eff
 Example (PowerShell):
 ```
 $env:ADMIN_USERNAME="admin"; $env:ADMIN_PASSWORD="change-me-123"; $env:JWT_SECRET="<32+ random chars>"
-.\kotlin.bat run -m backend
+.\gradlew.bat :backend:run
 $tok = (Invoke-RestMethod -Method Post http://localhost:8080/api/v1/auth/login -ContentType application/json -Body '{"username":"admin","password":"change-me-123"}').token
 Invoke-RestMethod -Method Delete http://localhost:8080/api/v1/admin/malls/2 -Headers @{Authorization="Bearer $tok"}
 ```
@@ -97,3 +97,12 @@ Invoke-RestMethod -Method Delete http://localhost:8080/api/v1/admin/malls/2 -Hea
 Ограничения: маршрутизация у новых ТЦ идёт по упрощённой вертикальной оси (центр здания), поэтому для сложных
 форм маршруты будут грубыми; формы рисуются ломаными (кривые Безье в UI не редактируются, но сохраняются при PUT
 существующих ТЦ, если не менять форму); лимита попыток входа нет.
+
+## Сборка (Gradle, Groovy DSL)
+
+Проект собирается Gradle Wrapper (`gradlew.bat`, версии в `gradle/libs.versions.toml`, модули — `settings.gradle`).
+- Веб-версия: `.\gradlew.bat :wasm-app:wasmJsBrowserDevelopmentRun` (сборка: `...DevelopmentExecutableDistribution`).
+- Desktop: `:jvm-app:run`; бэкенд: `:backend:run`.
+- Android включается флагом `-Pandroid=true` (нужен установленный SDK с принятыми лицензиями): `:android-app:assembleDebug`.
+- iOS-таргеты (`iosArm64`, `iosSimulatorArm64`) объявлены в `contract`/`shared`, но собираются только на macOS; Xcode-проект `ios-app` нужно подключить к фреймворку вручную.
+- Если Kotlin-демон падает по памяти, увеличьте `kotlin.daemon.jvmargs` в `gradle.properties`.
