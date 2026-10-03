@@ -27,13 +27,14 @@ fun MapCanvas(
         }
     }
 
-    // Synchronize text measurer, malls, focused mall, active floor, and selected store with indoor building layer
+    // Synchronize text measurer, malls, focused mall, active floor, selected store, and active route with indoor building layer
     val indoorLayer = mapState.layerRegistry.getLayer("indoor_building_layer") as? IndoorBuildingLayer
     indoorLayer?.textMeasurer = textMeasurer
     indoorLayer?.malls = mapState.malls
     indoorLayer?.focusedMall = mapState.focusedMall
     indoorLayer?.selectedFloorNumber = mapState.currentFloorNumber
     indoorLayer?.selectedStore = mapState.selectedStore
+    indoorLayer?.activeRoute = mapState.activeIndoorRoute
 
     Canvas(
         modifier = modifier

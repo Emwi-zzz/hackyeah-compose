@@ -1,16 +1,23 @@
 package features.map.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import features.indoor.presentation.FloorSelectorControl
 import features.indoor.presentation.IndoorBuildingLayer
+import features.indoor.presentation.IndoorRouteSearchBar
 import features.indoor.presentation.StoreDetailSheet
 import features.map.data.TileRepositoryImpl
 import features.map.presentation.components.CoordinateHUD
@@ -105,6 +112,43 @@ fun KrakowMapScreen() {
                 PresetLocationsBar(
                     mapState = mapState
                 )
+
+                // Indoor Multi-floor Route Search Bar / Launcher Button
+                if (mapState.focusedMall != null && (mapState.isMallOnScreen() || mapState.activeIndoorRoute != null)) {
+                    if (mapState.isIndoorNavigationOpen || mapState.activeIndoorRoute != null) {
+                        IndoorRouteSearchBar(
+                            mapState = mapState,
+                            modifier = Modifier
+                                .widthIn(max = 480.dp)
+                                .padding(top = 4.dp)
+                        )
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF2563EB),
+                            shadowElevation = 4.dp,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clickable {
+                                    mapState.isIndoorNavigationOpen = true
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("🧭", fontSize = 13.sp)
+                                Text(
+                                    "Indoor Directions & Route",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Floor Choosing Side Control: Appears on the side when building is on screen
@@ -115,6 +159,7 @@ fun KrakowMapScreen() {
                     onSelectFloor = { floorNumber ->
                         mapState.selectFloor(floorNumber)
                     },
+                    routeFloors = mapState.activeIndoorRoute?.levels?.map { it.floorNumber }?.toSet() ?: emptySet(),
                     visible = mapState.isMallOnScreen(),
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -159,6 +204,9 @@ fun KrakowMapScreen() {
                         floor = floor,
                         mall = mall,
                         onClose = { mapState.selectedStore = null },
+                        onNavigateToStore = {
+                            mapState.startRouteToStore(store)
+                        },
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp, bottom = 64.dp)

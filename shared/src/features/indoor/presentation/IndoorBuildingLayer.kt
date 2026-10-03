@@ -3,8 +3,7 @@ package features.indoor.presentation
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextMeasurer
@@ -12,6 +11,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import features.indoor.domain.IndoorRoute
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
 import sklepsearch.*
@@ -27,6 +27,7 @@ class IndoorBuildingLayer(
     var focusedMall: Mall? = MockGaleriaKrakowska.INSTANCE,
     var selectedFloorNumber: Int = 0,
     var selectedStore: Store? = null,
+    var activeRoute: IndoorRoute? = null,
     var textMeasurer: TextMeasurer? = null
 ) : MapLayer {
 
@@ -395,6 +396,176 @@ class IndoorBuildingLayer(
                     textLayoutResult = layout,
                     topLeft = Offset(topLeft.x + 8f, topLeft.y + 3f)
                 )
+            }
+
+            // 8. Active Indoor Bézier Navigation Route on this Floor Level
+            val route = activeRoute
+            if (route != null && route.mallId == curMall.id) {
+                val levelRoute = route.levels.find { it.floorNumber == selectedFloorNumber }
+                if (levelRoute != null) {
+                    val routePath = pathToScreen(levelRoute.bezierPath)
+
+                    // 8a. Outer glowing halo / aura
+                    context.drawScope.drawPath(
+                        path = routePath,
+                        color = Color(0x553B82F6).copy(alpha = opacity),
+                        style = Stroke(width = 14f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
+
+                    // 8b. Core vibrant navigation curve
+                    context.drawScope.drawPath(
+                        path = routePath,
+                        color = Color(0xFF2563EB).copy(alpha = opacity),
+                        style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
+
+                    // 8c. Animated flowing beam dash effect
+                    val phase = ((context.frameTimeNanos / 20_000_000L) % 36).toFloat()
+                    context.drawScope.drawPath(
+                        path = routePath,
+                        color = Color(0xFF67E8F9).copy(alpha = opacity),
+                        style = Stroke(
+                            width = 3f,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 18f), -phase)
+                        )
+                    )
+
+                    // 8d. Start Pin Marker (if start location is on this floor)
+                    if (route.startLocation.floorNumber == selectedFloorNumber) {
+                        val sp = mapToScreen(route.startLocation.coordinates)
+                        val pulse = (kotlin.math.sin(context.frameTimeNanos / 200_000_000.0) * 3f + 12f).toFloat()
+                        context.drawScope.drawCircle(
+                            color = Color(0x4410B981).copy(alpha = opacity),
+                            radius = pulse,
+                            center = sp
+                        )
+                        context.drawScope.drawCircle(
+                            color = Color(0xFF10B981).copy(alpha = opacity),
+                            radius = 8f,
+                            center = sp
+                        )
+                        context.drawScope.drawCircle(
+                            color = Color.White.copy(alpha = opacity),
+                            radius = 3.5f,
+                            center = sp
+                        )
+
+                        if (measurer != null) {
+                            val layout = measurer.measure(
+                                text = "🟢 START: ${route.startLocation.name}",
+                                style = TextStyle(
+                                    color = Color(0xFF065F46),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            val pillW = layout.size.width + 12f
+                            val pillH = layout.size.height + 6f
+                            val tl = Offset(sp.x - pillW / 2f, sp.y - pillH - 12f)
+                            context.drawScope.drawRoundRect(
+                                color = Color(0xF0ECFDF5).copy(alpha = opacity),
+                                topLeft = tl,
+                                size = Size(pillW, pillH),
+                                cornerRadius = CornerRadius(4f, 4f)
+                            )
+                            context.drawScope.drawRoundRect(
+                                color = Color(0xFF10B981).copy(alpha = opacity),
+                                topLeft = tl,
+                                size = Size(pillW, pillH),
+                                cornerRadius = CornerRadius(4f, 4f),
+                                style = Stroke(width = 1f)
+                            )
+                            context.drawScope.drawText(
+                                textLayoutResult = layout,
+                                topLeft = Offset(tl.x + 6f, tl.y + 3f)
+                            )
+                        }
+                    }
+
+                    // 8e. Destination Pin Marker (if destination is on this floor)
+                    if (route.endLocation.floorNumber == selectedFloorNumber) {
+                        val sp = mapToScreen(route.endLocation.coordinates)
+                        val pulse = (kotlin.math.cos(context.frameTimeNanos / 200_000_000.0) * 3f + 12f).toFloat()
+                        context.drawScope.drawCircle(
+                            color = Color(0x44EF4444).copy(alpha = opacity),
+                            radius = pulse,
+                            center = sp
+                        )
+                        context.drawScope.drawCircle(
+                            color = Color(0xFFEF4444).copy(alpha = opacity),
+                            radius = 8f,
+                            center = sp
+                        )
+                        context.drawScope.drawCircle(
+                            color = Color.White.copy(alpha = opacity),
+                            radius = 3.5f,
+                            center = sp
+                        )
+
+                        if (measurer != null) {
+                            val layout = measurer.measure(
+                                text = "🏁 END: ${route.endLocation.name}",
+                                style = TextStyle(
+                                    color = Color(0xFF991B1B),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            val pillW = layout.size.width + 12f
+                            val pillH = layout.size.height + 6f
+                            val tl = Offset(sp.x - pillW / 2f, sp.y - pillH - 12f)
+                            context.drawScope.drawRoundRect(
+                                color = Color(0xF0FEF2F2).copy(alpha = opacity),
+                                topLeft = tl,
+                                size = Size(pillW, pillH),
+                                cornerRadius = CornerRadius(4f, 4f)
+                            )
+                            context.drawScope.drawRoundRect(
+                                color = Color(0xFFEF4444).copy(alpha = opacity),
+                                topLeft = tl,
+                                size = Size(pillW, pillH),
+                                cornerRadius = CornerRadius(4f, 4f),
+                                style = Stroke(width = 1f)
+                            )
+                            context.drawScope.drawText(
+                                textLayoutResult = layout,
+                                topLeft = Offset(tl.x + 6f, tl.y + 3f)
+                            )
+                        }
+                    }
+
+                    // 8f. Escalator/Elevator Transition Callout
+                    if (measurer != null && route.endLocation.floorNumber != selectedFloorNumber) {
+                        val transitPt = levelRoute.waypoints.lastOrNull()
+                        if (transitPt != null) {
+                            val sp = mapToScreen(transitPt)
+                            val instruction = levelRoute.instructions.lastOrNull() ?: "Transfer floors"
+                            val layout = measurer.measure(
+                                text = "⚡ $instruction",
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            val pillW = layout.size.width + 16f
+                            val pillH = layout.size.height + 6f
+                            val tl = Offset(sp.x - pillW / 2f, sp.y + 14f)
+                            context.drawScope.drawRoundRect(
+                                color = Color(0xEE1E40AF).copy(alpha = opacity),
+                                topLeft = tl,
+                                size = Size(pillW, pillH),
+                                cornerRadius = CornerRadius(6f, 6f)
+                            )
+                            context.drawScope.drawText(
+                                textLayoutResult = layout,
+                                topLeft = Offset(tl.x + 8f, tl.y + 3f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

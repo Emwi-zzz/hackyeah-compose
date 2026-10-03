@@ -28,6 +28,7 @@ fun FloorSelectorControl(
     mall: Mall,
     currentFloorNumber: Int,
     onSelectFloor: (Int) -> Unit,
+    routeFloors: Set<Int> = emptySet(),
     modifier: Modifier = Modifier,
     visible: Boolean = true
 ) {
@@ -91,16 +92,17 @@ fun FloorSelectorControl(
                         else -> "Level"
                     }
 
+                    val hasRoute = floor.number in routeFloors
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
+                        color = if (isSelected) Color(0xFF2563EB) else if (hasRoute) Color(0xFF1E3A8A) else Color(0xFF1E293B),
                         modifier = Modifier
                             .width(52.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .clickable { onSelectFloor(floor.number) }
                             .border(
-                                width = if (isSelected) 1.5.dp else 0.5.dp,
-                                color = if (isSelected) Color(0xFF60A5FA) else Color(0xFF475569),
+                                width = if (isSelected) 1.5.dp else if (hasRoute) 1.dp else 0.5.dp,
+                                color = if (isSelected) Color(0xFF60A5FA) else if (hasRoute) Color(0xFF38BDF8) else Color(0xFF475569),
                                 shape = RoundedCornerShape(10.dp)
                             )
                     ) {
@@ -108,16 +110,26 @@ fun FloorSelectorControl(
                             modifier = Modifier.padding(vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = floorLabel,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                if (hasRoute) {
+                                    Spacer(Modifier.width(3.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .background(Color(0xFF38BDF8), androidx.compose.foundation.shape.CircleShape)
+                                    )
+                                }
+                            }
                             Text(
-                                text = floorLabel,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = subtitle,
+                                text = if (hasRoute && !isSelected) "Route" else subtitle,
                                 fontSize = 8.sp,
-                                color = if (isSelected) Color(0xFFDBEAFE) else Color(0xFF94A3B8)
+                                color = if (isSelected) Color(0xFFDBEAFE) else if (hasRoute) Color(0xFF7DD3FC) else Color(0xFF94A3B8)
                             )
                         }
                     }

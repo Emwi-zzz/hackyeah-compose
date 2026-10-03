@@ -61,6 +61,7 @@ fun PresetLocationsBar(
                     }
                     if (matchingMall != null) {
                         mapState.refocusOnMall(matchingMall)
+                        mapState.isIndoorNavigationOpen = true
                     } else {
                         mapState.flyTo(preset.point, preset.zoom)
                     }

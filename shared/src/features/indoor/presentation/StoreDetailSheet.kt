@@ -22,6 +22,7 @@ fun StoreDetailSheet(
     floor: Floor,
     mall: Mall,
     onClose: () -> Unit,
+    onNavigateToStore: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -95,6 +96,18 @@ fun StoreDetailSheet(
                 Column {
                     Text("Level", fontSize = 9.sp, color = Color(0xFF64748B))
                     Text("Level ${floor.number}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+                }
+            }
+
+            if (onNavigateToStore != null) {
+                Button(
+                    onClick = onNavigateToStore,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text("🧭 Directions to ${store.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

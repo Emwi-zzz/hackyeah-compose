@@ -7,6 +7,8 @@ import androidx.compose.ui.geometry.Offset
 import core.geometry.GeoMath
 import core.geometry.GeoPoint
 import core.geometry.WebMercatorProjection
+import features.indoor.data.IndoorRoutingRepositoryImpl
+import features.indoor.domain.*
 import features.indoor.presentation.IndoorBuildingLayer
 import features.map.data.OpenTileSources
 import features.map.domain.MapViewport
@@ -54,6 +56,15 @@ class MapState(
     var currentFloorNumber by mutableStateOf(0)
     var selectedStore by mutableStateOf<Store?>(null)
     var userLockedMallId by mutableStateOf<Long?>(null)
+
+    // Indoor Multi-floor Routing Engine & State
+    val indoorRoutingRepository: IndoorRoutingRepository = IndoorRoutingRepositoryImpl()
+    var activeIndoorRoute by mutableStateOf<IndoorRoute?>(null)
+    var isIndoorRouteLoading by mutableStateOf(false)
+    var indoorRouteError by mutableStateOf<String?>(null)
+    var indoorRouteStartLocation by mutableStateOf<NavLocation?>(null)
+    var indoorRouteEndLocation by mutableStateOf<NavLocation?>(null)
+    var isIndoorNavigationOpen by mutableStateOf(false)
 
     val renderPipeline = RenderPipeline(layersSupplier = { layerRegistry.layers })
 
@@ -115,6 +126,10 @@ class MapState(
     }
 
     fun refocusOnMall(mall: Mall, animate: Boolean = true) {
+        val mallChanged = focusedMall?.id != mall.id
+        if (mallChanged) {
+            clearIndoorRoute()
+        }
         userLockedMallId = mall.id
         focusedMall = mall
         currentFloorNumber = maxOf(0, mall.minFloor)
@@ -129,6 +144,56 @@ class MapState(
 
     fun flyToMall(mall: Mall) {
         refocusOnMall(mall)
+    }
+
+    fun getAvailableNavLocations(): List<NavLocation> {
+        val mall = focusedMall ?: return emptyList()
+        return (indoorRoutingRepository as? IndoorRoutingRepositoryImpl)?.getAllNavLocations(mall.id) ?: emptyList()
+    }
+
+    fun requestIndoorRoute(start: NavLocation, end: NavLocation) {
+        val mall = focusedMall ?: return
+        indoorRouteStartLocation = start
+        indoorRouteEndLocation = end
+        isIndoorRouteLoading = true
+        indoorRouteError = null
+        scope.launch {
+            val result = indoorRoutingRepository.calculateRoute(mall.id, start, end)
+            isIndoorRouteLoading = false
+            result.onSuccess { route ->
+                activeIndoorRoute = route
+                selectFloor(start.floorNumber)
+            }.onFailure { err ->
+                indoorRouteError = err.message ?: "Failed to calculate route"
+            }
+        }
+    }
+
+    fun clearIndoorRoute() {
+        activeIndoorRoute = null
+        indoorRouteStartLocation = null
+        indoorRouteEndLocation = null
+        indoorRouteError = null
+    }
+
+    fun swapIndoorRouteEndpoints() {
+        val s = indoorRouteStartLocation
+        val e = indoorRouteEndLocation
+        if (s != null && e != null) {
+            requestIndoorRoute(start = e, end = s)
+        } else {
+            indoorRouteStartLocation = e
+            indoorRouteEndLocation = s
+        }
+    }
+
+    fun startRouteToStore(store: Store) {
+        val locations = getAvailableNavLocations()
+        val dest = locations.find { it.id == "store_${store.Instanceid}" } ?: return
+        val defaultStart = locations.firstOrNull { it.type == NavLocationType.EXIT }
+            ?: locations.firstOrNull() ?: return
+        isIndoorNavigationOpen = true
+        requestIndoorRoute(start = defaultStart, end = dest)
     }
 
     fun updateScreenSize(width: Float, height: Float) {
