@@ -25,6 +25,8 @@ data class PresetLocation(
 )
 
 val KRAKOW_PRESETS = listOf(
+    PresetLocation("🏢", "Galeria Krakowska (Indoor)", GeoPoint(50.0664, 19.9482), 16.5),
+    PresetLocation("🛍️", "Galeria Kazimierz (Indoor)", GeoPoint(50.0528, 19.9580), 16.5),
     PresetLocation("🏰", "Wawel Castle", GeoPoint.WAWEL_CASTLE, 15.5),
     PresetLocation("🏛️", "Rynek Główny", GeoPoint.KRAKOW_RYNEK, 16.0),
     PresetLocation("⛪", "Kościół Mariacki", GeoPoint.KOSCIOL_MARIACKI, 16.5),
@@ -54,7 +56,14 @@ fun PresetLocationsBar(
                 shadowElevation = 3.dp,
                 tonalElevation = 1.dp,
                 modifier = Modifier.clickable {
-                    mapState.flyTo(preset.point, preset.zoom)
+                    val matchingMall = mapState.malls.find {
+                        it.name.contains(preset.name.substringBefore(" (Indoor)"), ignoreCase = true)
+                    }
+                    if (matchingMall != null) {
+                        mapState.refocusOnMall(matchingMall)
+                    } else {
+                        mapState.flyTo(preset.point, preset.zoom)
+                    }
                 }
             ) {
                 Row(

@@ -10,9 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.rememberTextMeasurer
+import features.indoor.presentation.IndoorBuildingLayer
 import features.rendering.domain.RenderContext
-import features.rendering.layers.PoiMarkerLayer
-import features.tools.layers.InteractiveToolLayer
 
 @Composable
 fun MapCanvas(
@@ -22,20 +21,19 @@ fun MapCanvas(
 ) {
     val textMeasurer = rememberTextMeasurer()
 
-    // Smooth continuous animation frame clock for dynamic render layers (beacons, pulse, etc.)
     val frameTimeNanos by produceState(0L) {
         while (true) {
             withFrameNanos { value = it }
         }
     }
 
-    // Keep text measurer and selection state synchronized with layers
-    val poiLayer = mapState.layerRegistry.getLayer("poi_marker_layer") as? PoiMarkerLayer
-    poiLayer?.textMeasurer = textMeasurer
-    poiLayer?.selectedPlaceId = mapState.selectedPlace?.id
-
-    val toolLayer = mapState.layerRegistry.getLayer("interactive_tool_layer") as? InteractiveToolLayer
-    toolLayer?.textMeasurer = textMeasurer
+    // Synchronize text measurer, malls, focused mall, active floor, and selected store with indoor building layer
+    val indoorLayer = mapState.layerRegistry.getLayer("indoor_building_layer") as? IndoorBuildingLayer
+    indoorLayer?.textMeasurer = textMeasurer
+    indoorLayer?.malls = mapState.malls
+    indoorLayer?.focusedMall = mapState.focusedMall
+    indoorLayer?.selectedFloorNumber = mapState.currentFloorNumber
+    indoorLayer?.selectedStore = mapState.selectedStore
 
     Canvas(
         modifier = modifier

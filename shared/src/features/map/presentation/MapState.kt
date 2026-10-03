@@ -4,8 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import core.geometry.GeoMath
 import core.geometry.GeoPoint
 import core.geometry.WebMercatorProjection
+import features.indoor.presentation.IndoorBuildingLayer
 import features.map.data.OpenTileSources
 import features.map.domain.MapViewport
 import features.map.domain.TileRepository
@@ -13,17 +15,15 @@ import features.map.domain.TileSource
 import features.places.domain.Place
 import features.rendering.domain.LayerRegistry
 import features.rendering.domain.RenderPipeline
-import features.tools.domain.ToolController
-import features.tools.domain.ToolMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import sklepsearch.*
 
 class MapState(
     val tileRepository: TileRepository,
     val layerRegistry: LayerRegistry,
-    val toolController: ToolController,
     private val scope: CoroutineScope
 ) {
     var viewport by mutableStateOf(
@@ -42,13 +42,99 @@ class MapState(
     var isSearchOpen by mutableStateOf(false)
     var isDebugStatsOpen by mutableStateOf(false)
 
+    // Collection of indoor buildings in Krakow
+    val malls: List<Mall> = listOf(
+        MockGaleriaKrakowska.INSTANCE,
+        MockGaleriaKazimierz.INSTANCE
+    )
+
+    // Focus state: one active building is in focus based on scale and position, or user click
+    var focusedMall by mutableStateOf<Mall?>(MockGaleriaKrakowska.INSTANCE)
+    val activeMall: Mall? get() = focusedMall
+    var currentFloorNumber by mutableStateOf(0)
+    var selectedStore by mutableStateOf<Store?>(null)
+    var userLockedMallId by mutableStateOf<Long?>(null)
+
     val renderPipeline = RenderPipeline(layersSupplier = { layerRegistry.layers })
 
     private var animationJob: Job? = null
 
+    /**
+     * Determines whether the focused mall is on screen and scaled to detailed indoor view.
+     */
+    fun isMallOnScreen(): Boolean {
+        val mall = focusedMall ?: return false
+        val visibleBounds = viewport.visibleBounds()
+        val mallBounds = mall.getBoundingBox()
+        return visibleBounds.intersects(mallBounds) && viewport.zoom >= IndoorBuildingLayer.DETAIL_ZOOM_THRESHOLD
+    }
+
+    /**
+     * Updates building focus based on current map position and viewport scale.
+     */
+    fun updateFocusBasedOnScaleAndPosition() {
+        val visibleBounds = viewport.visibleBounds()
+        val visibleMalls = malls.filter { visibleBounds.intersects(it.getBoundingBox()) }
+
+        if (visibleMalls.isEmpty()) return
+
+        // If user manually refocused a mall and it remains visible, prioritize it
+        val lockedId = userLockedMallId
+        if (lockedId != null) {
+            val locked = visibleMalls.find { it.id == lockedId }
+            if (locked != null) {
+                if (focusedMall?.id != locked.id) {
+                    focusedMall = locked
+                }
+                return
+            }
+        }
+
+        // Focus on the building closest to the current viewport center
+        val center = viewport.center
+        val closest = visibleMalls.minByOrNull {
+            GeoMath.haversineDistanceMeters(center, it.getBoundingBox().center)
+        }
+
+        if (closest != null && closest.id != focusedMall?.id) {
+            focusedMall = closest
+            currentFloorNumber = maxOf(0, closest.minFloor)
+            selectedStore = null
+        }
+    }
+
+    fun selectFloor(floorNumber: Int) {
+        currentFloorNumber = floorNumber
+        selectedStore = null
+    }
+
+    fun jumpTo(target: GeoPoint, targetZoom: Double = viewport.zoom) {
+        animationJob?.cancel()
+        viewport = viewport.copy(center = target, zoom = targetZoom)
+        updateFocusBasedOnScaleAndPosition()
+    }
+
+    fun refocusOnMall(mall: Mall, animate: Boolean = true) {
+        userLockedMallId = mall.id
+        focusedMall = mall
+        currentFloorNumber = maxOf(0, mall.minFloor)
+        selectedStore = null
+        val targetZoom = if (viewport.zoom < IndoorBuildingLayer.DETAIL_ZOOM_THRESHOLD) 16.5 else viewport.zoom
+        if (animate) {
+            flyTo(mall.getBoundingBox().center, targetZoom)
+        } else {
+            jumpTo(mall.getBoundingBox().center, targetZoom)
+        }
+    }
+
+    fun flyToMall(mall: Mall) {
+        refocusOnMall(mall)
+    }
+
     fun updateScreenSize(width: Float, height: Float) {
         if (width > 0f && height > 0f && (viewport.screenWidth != width || viewport.screenHeight != height)) {
             viewport = viewport.withSize(width, height)
+            updateFocusBasedOnScaleAndPosition()
         }
     }
 
@@ -64,6 +150,8 @@ class MapState(
             screenHeight = viewport.screenHeight
         )
         viewport = viewport.withCenter(newCenterGeo)
+        userLockedMallId = null
+        updateFocusBasedOnScaleAndPosition()
     }
 
     fun zoomBy(delta: Double, focalScreenOffset: Offset? = null) {
@@ -72,7 +160,6 @@ class MapState(
         if (newZoom == oldZoom) return
 
         if (focalScreenOffset != null && viewport.screenWidth > 0f && viewport.screenHeight > 0f) {
-            // Keep the geo point under the mouse cursor fixed while zooming
             val geoUnderFocal = WebMercatorProjection.screenToGeo(
                 screenOffset = focalScreenOffset,
                 center = viewport.center,
@@ -80,7 +167,6 @@ class MapState(
                 screenWidth = viewport.screenWidth,
                 screenHeight = viewport.screenHeight
             )
-            // Compute what center is needed so geoUnderFocal remains under focalScreenOffset
             val scaleNew = WebMercatorProjection.worldPixelSize(newZoom)
             val focalWorldX = WebMercatorProjection.toWorldX(geoUnderFocal.longitude)
             val focalWorldY = WebMercatorProjection.toWorldY(geoUnderFocal.latitude)
@@ -96,6 +182,7 @@ class MapState(
         } else {
             viewport = viewport.withZoom(newZoom)
         }
+        updateFocusBasedOnScaleAndPosition()
     }
 
     fun zoomIn() {
@@ -114,7 +201,6 @@ class MapState(
             val steps = 24
             for (i in 1..steps) {
                 val t = i.toFloat() / steps
-                // Smooth ease-in-out curve
                 val ease = t * t * (3f - 2f * t)
                 val currentLat = startCenter.latitude + (target.latitude - startCenter.latitude) * ease
                 val currentLon = startCenter.longitude + (target.longitude - startCenter.longitude) * ease
@@ -127,10 +213,12 @@ class MapState(
                 delay(16)
             }
             viewport = viewport.copy(center = target, zoom = targetZoom)
+            updateFocusBasedOnScaleAndPosition()
         }
     }
 
     fun resetToKrakow() {
+        userLockedMallId = null
         flyTo(GeoPoint.KRAKOW_CENTER, 14.0)
     }
 
@@ -143,12 +231,38 @@ class MapState(
             screenHeight = viewport.screenHeight
         )
 
-        if (toolController.activeMode == ToolMode.PAN) {
-            // Check if clicking near a place marker
-            // Markers are handled by POI selection
-            toolController.onMapClick(geo)
-        } else {
-            toolController.onMapClick(geo)
+        // Check if any building was clicked to refocus or select a store
+        val clickedMall = malls.find { mall ->
+            val pt = mall.geoToPoint(geo)
+            val inBounds = pt.x in -20.0..(mall.size.x + 20.0) && pt.y in -20.0..(mall.size.y + 20.0)
+            if (!inBounds) return@find false
+            val floorBox = mall.floors.firstOrNull()?.box
+            if (floorBox != null && floorBox.contains(pt)) true else mall.getBoundingBox().contains(geo)
+        } ?: malls.find { it.getBoundingBox().contains(geo) }
+
+        if (clickedMall != null) {
+            if (clickedMall.id != focusedMall?.id) {
+                // Refocus on clicked building!
+                refocusOnMall(clickedMall)
+                return
+            } else {
+                // Clicked on already focused building: check for store hit or zoom in
+                if (viewport.zoom >= IndoorBuildingLayer.DETAIL_ZOOM_THRESHOLD) {
+                    val pt = clickedMall.geoToPoint(geo)
+                    val store = clickedMall.findStoreAt(pt, currentFloorNumber)
+                    selectedStore = store
+                    if (store != null) {
+                        selectedPlace = null
+                        return
+                    }
+                } else {
+                    // Zoom into detailed view of this building
+                    flyTo(clickedMall.getBoundingBox().center, 16.5)
+                    return
+                }
+            }
         }
+
+        selectedStore = null
     }
 }

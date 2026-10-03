@@ -9,55 +9,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import features.indoor.presentation.FloorSelectorControl
+import features.indoor.presentation.IndoorBuildingLayer
+import features.indoor.presentation.StoreDetailSheet
 import features.map.data.TileRepositoryImpl
 import features.map.presentation.components.CoordinateHUD
 import features.map.presentation.components.MapControls
 import features.map.presentation.components.PresetLocationsBar
 import features.map.presentation.components.TileSourceSelector
-import features.places.data.KrakowCuratedPlaces
 import features.places.data.NominatimPlacesRepository
 import features.places.presentation.PlaceDetailSheet
 import features.places.presentation.SearchBarOverlay
 import features.rendering.domain.LayerRegistry
-import features.rendering.layers.BeaconPulseLayer
-import features.rendering.layers.HeatmapLayer
-import features.rendering.layers.KrakowVectorPresets
-import features.rendering.layers.PoiMarkerLayer
 import features.rendering.layers.TileLayer
-import features.rendering.layers.VectorLayer
 import features.rendering.presentation.LayerManagerSheet
 import features.rendering.presentation.RenderDebugOverlay
-import features.tools.domain.ToolController
-import features.tools.layers.InteractiveToolLayer
-import features.tools.presentation.ToolPaletteBar
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import sklepsearch.MockGaleriaKazimierz
+import sklepsearch.MockGaleriaKrakowska
+import sklepsearch.getFloor
 
 @Composable
 fun KrakowMapScreen() {
     val coroutineScope = rememberCoroutineScope()
     var hoveredOffset by remember { mutableStateOf<Offset?>(null) }
 
-    // 1. Core Repositories & Controllers (Clean Architecture)
-    val tileRepository = remember {
-        TileRepositoryImpl()
-    }
-    val placesRepository = remember {
-        NominatimPlacesRepository()
-    }
-    val toolController = remember {
-        ToolController()
+    // 1. Core Repositories (Clean Architecture)
+    val tileRepository = remember { TileRepositoryImpl() }
+    val placesRepository = remember { NominatimPlacesRepository() }
+
+    // 2. Clear old on-top draws; register base map tile layer and indoor building layer
+    val indoorBuildingLayer = remember {
+        IndoorBuildingLayer(
+            malls = listOf(MockGaleriaKrakowska.INSTANCE, MockGaleriaKazimierz.INSTANCE),
+            focusedMall = MockGaleriaKrakowska.INSTANCE,
+            selectedFloorNumber = 0
+        )
     }
 
-    // 2. Default Map Layers
     val initialLayers = remember {
         listOf(
             TileLayer(),
-            VectorLayer(features = KrakowVectorPresets.DEFAULT_FEATURES.toMutableList()),
-            HeatmapLayer(),
-            BeaconPulseLayer(),
-            PoiMarkerLayer(places = KrakowCuratedPlaces.ALL),
-            InteractiveToolLayer(toolController = toolController)
+            indoorBuildingLayer
         )
     }
 
@@ -70,7 +62,6 @@ fun KrakowMapScreen() {
         MapState(
             tileRepository = tileRepository,
             layerRegistry = layerRegistry,
-            toolController = toolController,
             scope = coroutineScope
         )
     }
@@ -81,14 +72,14 @@ fun KrakowMapScreen() {
                 .fillMaxSize()
                 .background(Color(0xFFE2E8F0))
         ) {
-            // Base Layer: Real-time 60fps Map Canvas & Gesture Engine
+            // Base Layer: Map Canvas & Gesture Engine
             MapCanvas(
                 mapState = mapState,
                 onHover = { hoveredOffset = it },
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Top Area: Search Bar, Tools, and Landmark Presets
+            // Top Area: Search Bar and Quick Navigation Presets
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -96,31 +87,42 @@ fun KrakowMapScreen() {
                     .padding(top = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Action Row
+                // Top Search Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.Top
                 ) {
                     SearchBarOverlay(
                         mapState = mapState,
                         placesRepository = placesRepository
                     )
-
-                    ToolPaletteBar(
-                        toolController = toolController
-                    )
                 }
 
-                // Krakow Landmark Presets Bar
+                // Krakow Presets Bar (with Galeria Krakowska Indoor leading)
                 PresetLocationsBar(
                     mapState = mapState
                 )
             }
 
-            // Bottom-Right: Navigation & Engine Controls
+            // Floor Choosing Side Control: Appears on the side when building is on screen
+            mapState.focusedMall?.let { mall ->
+                FloorSelectorControl(
+                    mall = mall,
+                    currentFloorNumber = mapState.currentFloorNumber,
+                    onSelectFloor = { floorNumber ->
+                        mapState.selectFloor(floorNumber)
+                    },
+                    visible = mapState.isMallOnScreen(),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp)
+                )
+            }
+
+            // Bottom-Right: Navigation Controls
             MapControls(
                 mapState = mapState,
                 modifier = Modifier.align(Alignment.BottomEnd)
@@ -147,6 +149,23 @@ fun KrakowMapScreen() {
                 )
             }
 
+            // Overlays: Selected Indoor Store Detail Sheet
+            mapState.selectedStore?.let { store ->
+                val mall = mapState.focusedMall
+                val floor = mall?.getFloor(mapState.currentFloorNumber)
+                if (mall != null && floor != null) {
+                    StoreDetailSheet(
+                        store = store,
+                        floor = floor,
+                        mall = mall,
+                        onClose = { mapState.selectedStore = null },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp, bottom = 64.dp)
+                    )
+                }
+            }
+
             // Overlays: Layer Manager Drawer / Card
             if (mapState.isLayerManagerOpen) {
                 LayerManagerSheet(
@@ -167,7 +186,7 @@ fun KrakowMapScreen() {
                 )
             }
 
-            // Overlays: Engine Stats & Custom Layer Injector
+            // Overlays: Engine Stats
             if (mapState.isDebugStatsOpen) {
                 RenderDebugOverlay(
                     mapState = mapState,

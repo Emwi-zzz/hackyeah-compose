@@ -1,0 +1,401 @@
+package features.indoor.presentation
+
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import features.rendering.domain.MapLayer
+import features.rendering.domain.RenderContext
+import sklepsearch.*
+
+class IndoorBuildingLayer(
+    override val id: String = "indoor_building_layer",
+    override val name: String = "Indoor Building & Floor Plan",
+    override val description: String = "Multi-level indoor building floor plan with stores, elevators, and escalators",
+    override var isVisible: Boolean = true,
+    override var opacity: Float = 1.0f,
+    override val zIndex: Int = 10,
+    var malls: List<Mall> = listOf(MockGaleriaKrakowska.INSTANCE, MockGaleriaKazimierz.INSTANCE),
+    var focusedMall: Mall? = MockGaleriaKrakowska.INSTANCE,
+    var selectedFloorNumber: Int = 0,
+    var selectedStore: Store? = null,
+    var textMeasurer: TextMeasurer? = null
+) : MapLayer {
+
+    val mall: Mall get() = focusedMall ?: malls.firstOrNull() ?: MockGaleriaKrakowska.INSTANCE
+
+    companion object {
+        const val DETAIL_ZOOM_THRESHOLD = 15.5
+    }
+
+    override fun render(context: RenderContext) {
+        val measurer = textMeasurer
+        val zoom = context.viewport.zoom
+        val isDetailedView = zoom >= DETAIL_ZOOM_THRESHOLD
+
+        for (curMall in malls) {
+            val mallBounds = curMall.getBoundingBox()
+            if (!context.visibleBounds.intersects(mallBounds)) continue
+
+            val isFocused = (focusedMall != null && curMall.id == focusedMall?.id)
+
+            fun mapToScreen(p: Point): Offset {
+                val geo = curMall.pointToGeo(p)
+                return context.geoToScreen(geo)
+            }
+
+            fun pathToScreen(path2D: Path2D): Path {
+                val p = Path()
+                var hasStarted = false
+                for (seg in path2D.segments) {
+                    when (seg) {
+                        is PathSegment.MoveTo -> {
+                            val sp = mapToScreen(Point(seg.x, seg.y))
+                            p.moveTo(sp.x, sp.y)
+                            hasStarted = true
+                        }
+                        is PathSegment.LineTo -> {
+                            val sp = mapToScreen(Point(seg.x, seg.y))
+                            if (!hasStarted) {
+                                p.moveTo(sp.x, sp.y)
+                                hasStarted = true
+                            } else {
+                                p.lineTo(sp.x, sp.y)
+                            }
+                        }
+                        is PathSegment.QuadTo -> {
+                            val sp1 = mapToScreen(Point(seg.x1, seg.y1))
+                            val sp2 = mapToScreen(Point(seg.x2, seg.y2))
+                            if (!hasStarted) {
+                                p.moveTo(sp1.x, sp1.y)
+                                hasStarted = true
+                            }
+                            p.quadraticTo(sp1.x, sp1.y, sp2.x, sp2.y)
+                        }
+                        is PathSegment.CubicTo -> {
+                            val sp1 = mapToScreen(Point(seg.x1, seg.y1))
+                            val sp2 = mapToScreen(Point(seg.x2, seg.y2))
+                            val sp3 = mapToScreen(Point(seg.x3, seg.y3))
+                            if (!hasStarted) {
+                                p.moveTo(sp1.x, sp1.y)
+                                hasStarted = true
+                            }
+                            p.cubicTo(sp1.x, sp1.y, sp2.x, sp2.y, sp3.x, sp3.y)
+                        }
+                        is PathSegment.Close -> p.close()
+                    }
+                }
+                return p
+            }
+
+            val floor = if (isFocused) {
+                curMall.getFloor(selectedFloorNumber) ?: curMall.floors.firstOrNull() ?: continue
+            } else {
+                curMall.floors.firstOrNull() ?: continue
+            }
+
+            // Outer footprint / building box
+            val floorBoxPath = pathToScreen(floor.box)
+
+            // When scale is large (zoom < 15.5) OR if the building is not focused:
+            // ONLY the outline should be rendered!
+            if (!isDetailedView || !isFocused) {
+                // Drop shadow under outline
+                context.drawScope.drawPath(
+                    path = floorBoxPath,
+                    color = Color.Black.copy(alpha = 0.15f * opacity),
+                    style = Stroke(width = if (isFocused) 5f else 3f)
+                )
+
+                // Building footprint fill
+                context.drawScope.drawPath(
+                    path = floorBoxPath,
+                    color = (if (isFocused) Color(0xFFEFF6FF) else Color(0xFFF1F5F9)).copy(alpha = opacity),
+                    style = Fill
+                )
+
+                // Building outline stroke
+                context.drawScope.drawPath(
+                    path = floorBoxPath,
+                    color = (if (isFocused) Color(0xFF2563EB) else Color(0xFF64748B)).copy(alpha = opacity),
+                    style = Stroke(width = if (isFocused) 3.5f else 2.2f)
+                )
+
+                // Outer entry points on outline
+                for (entry in curMall.entryPoints) {
+                    val sp = mapToScreen(entry)
+                    context.drawScope.drawCircle(
+                        color = Color(0xFF2563EB).copy(alpha = opacity),
+                        radius = 4.5f,
+                        center = sp
+                    )
+                    context.drawScope.drawCircle(
+                        color = Color.White.copy(alpha = opacity),
+                        radius = 2.5f,
+                        center = sp
+                    )
+                }
+
+                // Building status badge pill
+                if (measurer != null && zoom >= 13.0) {
+                    val centerGeo = mallBounds.center
+                    val centerScreen = context.geoToScreen(centerGeo)
+                    val labelText = if (isFocused) "🏢 ${curMall.name} (Active)" else "🏢 ${curMall.name} (Click to focus)"
+                    val labelLayout = measurer.measure(
+                        text = labelText,
+                        style = TextStyle(
+                            color = if (isFocused) Color(0xFF1E3A8A) else Color(0xFF334155),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    val pillW = labelLayout.size.width + 16f
+                    val pillH = labelLayout.size.height + 6f
+                    val tl = Offset(centerScreen.x - pillW / 2f, centerScreen.y - pillH / 2f)
+
+                    context.drawScope.drawRoundRect(
+                        color = Color.White.copy(alpha = 0.95f * opacity),
+                        topLeft = tl,
+                        size = Size(pillW, pillH),
+                        cornerRadius = CornerRadius(6f, 6f)
+                    )
+                    context.drawScope.drawRoundRect(
+                        color = (if (isFocused) Color(0xFF2563EB) else Color(0xFF94A3B8)).copy(alpha = opacity),
+                        topLeft = tl,
+                        size = Size(pillW, pillH),
+                        cornerRadius = CornerRadius(6f, 6f),
+                        style = Stroke(width = 1.2f)
+                    )
+                    context.drawScope.drawText(
+                        textLayoutResult = labelLayout,
+                        topLeft = Offset(tl.x + 8f, tl.y + 3f)
+                    )
+                }
+                continue
+            }
+
+            // --- DETAILED INDOOR VIEW FOR FOCUSED BUILDING (zoom >= 15.5) ---
+            // 1. Draw Building Outer Footprint
+            context.drawScope.drawPath(
+                path = floorBoxPath,
+                color = Color.Black.copy(alpha = 0.25f * opacity),
+                style = Stroke(width = 6f)
+            )
+            context.drawScope.drawPath(
+                path = floorBoxPath,
+                color = Color(0xFFF8FAFC).copy(alpha = opacity),
+                style = Fill
+            )
+            context.drawScope.drawPath(
+                path = floorBoxPath,
+                color = Color(0xFF0F172A).copy(alpha = opacity),
+                style = Stroke(width = 3.5f)
+            )
+
+            // 2. Draw Walkway / Interior Guidelines (if Galeria Krakowska)
+            if (curMall.id == 1L) {
+                val atriumTop = mapToScreen(Point(450.0, 80.0))
+                val atriumBottom = mapToScreen(Point(450.0, 920.0))
+                val atriumRightTop = mapToScreen(Point(550.0, 80.0))
+                val atriumRightBottom = mapToScreen(Point(550.0, 920.0))
+                context.drawScope.drawLine(
+                    color = Color(0xFFE2E8F0).copy(alpha = opacity),
+                    start = atriumTop, end = atriumBottom, strokeWidth = 1f
+                )
+                context.drawScope.drawLine(
+                    color = Color(0xFFE2E8F0).copy(alpha = opacity),
+                    start = atriumRightTop, end = atriumRightBottom, strokeWidth = 1f
+                )
+            }
+
+            // 3. Draw Stores (Colors generated deterministically based on Shopid!)
+            for (store in floor.stores) {
+                val storePath = pathToScreen(store.area)
+                val isSelected = selectedStore?.Instanceid == store.Instanceid
+
+                val fillColor = ShopColorGenerator.colorForShopId(store.Shopid, isSelected)
+                val wallColor = ShopColorGenerator.wallColorForShopId(store.Shopid, isSelected)
+
+                context.drawScope.drawPath(
+                    path = storePath,
+                    color = fillColor.copy(alpha = opacity),
+                    style = Fill
+                )
+                val wallWidth = if (isSelected) 3f else 1.5f
+                context.drawScope.drawPath(
+                    path = storePath,
+                    color = wallColor.copy(alpha = opacity),
+                    style = Stroke(width = wallWidth)
+                )
+
+                // Entry points
+                for (entry in store.entryPoints) {
+                    val sp = mapToScreen(entry)
+                    context.drawScope.drawCircle(
+                        color = Color(0xFF10B981).copy(alpha = opacity),
+                        radius = 3.5f,
+                        center = sp
+                    )
+                    context.drawScope.drawCircle(
+                        color = Color.White.copy(alpha = opacity),
+                        radius = 1.5f,
+                        center = sp
+                    )
+                }
+
+                // Store name label
+                if (measurer != null) {
+                    val bounds = store.area.getBounds()
+                    val centerPt = Point(bounds.centerX, bounds.centerY)
+                    val centerScreen = mapToScreen(centerPt)
+
+                    val labelFontSize = if (zoom >= 16.5) 11.sp else 9.sp
+                    val textLayout = measurer.measure(
+                        text = store.name,
+                        style = TextStyle(
+                            color = Color(0xFF0F172A),
+                            fontSize = labelFontSize,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                        )
+                    )
+
+                    val textW = textLayout.size.width
+                    val textH = textLayout.size.height
+                    val textTopLeft = Offset(centerScreen.x - textW / 2f, centerScreen.y - textH / 2f)
+
+                    context.drawScope.drawRoundRect(
+                        color = Color.White.copy(alpha = 0.85f * opacity),
+                        topLeft = Offset(textTopLeft.x - 4f, textTopLeft.y - 2f),
+                        size = Size(textW + 8f, textH + 4f),
+                        cornerRadius = CornerRadius(4f, 4f)
+                    )
+                    context.drawScope.drawText(
+                        textLayoutResult = textLayout,
+                        topLeft = textTopLeft
+                    )
+                }
+            }
+
+            // 4. Elevators
+            for (elevator in floor.elevators) {
+                val sp = mapToScreen(elevator.coordinates)
+                val elevatorSize = 22f
+
+                context.drawScope.drawRoundRect(
+                    color = Color(0xFF334155).copy(alpha = opacity),
+                    topLeft = Offset(sp.x - elevatorSize / 2f, sp.y - elevatorSize / 2f),
+                    size = Size(elevatorSize, elevatorSize),
+                    cornerRadius = CornerRadius(4f, 4f)
+                )
+                context.drawScope.drawRoundRect(
+                    color = Color.White.copy(alpha = opacity),
+                    topLeft = Offset(sp.x - elevatorSize / 2f, sp.y - elevatorSize / 2f),
+                    size = Size(elevatorSize, elevatorSize),
+                    cornerRadius = CornerRadius(4f, 4f),
+                    style = Stroke(width = 1.5f)
+                )
+
+                if (measurer != null) {
+                    val layout = measurer.measure(
+                        text = "🛗",
+                        style = TextStyle(fontSize = 11.sp)
+                    )
+                    context.drawScope.drawText(
+                        textLayoutResult = layout,
+                        topLeft = Offset(sp.x - layout.size.width / 2f, sp.y - layout.size.height / 2f)
+                    )
+                }
+            }
+
+            // 5. Escalators (Directed UP or DOWN)
+            for (escalator in floor.escalators) {
+                val sp = mapToScreen(escalator.coordinates)
+                val width = 28f
+                val height = 18f
+                val isUp = escalator.direction == EscalatorDirection.UP
+                val bg = if (isUp) Color(0xFF059669) else Color(0xFFD97706)
+
+                context.drawScope.drawRoundRect(
+                    color = bg.copy(alpha = 0.95f * opacity),
+                    topLeft = Offset(sp.x - width / 2f, sp.y - height / 2f),
+                    size = Size(width, height),
+                    cornerRadius = CornerRadius(4f, 4f)
+                )
+                context.drawScope.drawRoundRect(
+                    color = Color.White.copy(alpha = opacity),
+                    topLeft = Offset(sp.x - width / 2f, sp.y - height / 2f),
+                    size = Size(width, height),
+                    cornerRadius = CornerRadius(4f, 4f),
+                    style = Stroke(width = 1.5f)
+                )
+
+                if (measurer != null) {
+                    val dirText = if (isUp) "▲ UP" else "▼ DN"
+                    val layout = measurer.measure(
+                        text = dirText,
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    context.drawScope.drawText(
+                        textLayoutResult = layout,
+                        topLeft = Offset(sp.x - layout.size.width / 2f, sp.y - layout.size.height / 2f)
+                    )
+                }
+            }
+
+            // 6. Mall Outer Entry Points
+            for (entry in curMall.entryPoints) {
+                val sp = mapToScreen(entry)
+                context.drawScope.drawCircle(
+                    color = Color(0xFF2563EB).copy(alpha = opacity),
+                    radius = 7f,
+                    center = sp
+                )
+                context.drawScope.drawCircle(
+                    color = Color.White.copy(alpha = opacity),
+                    radius = 4f,
+                    center = sp
+                )
+            }
+
+            // 7. Building Header Indicator Banner
+            if (measurer != null) {
+                val topCenter = mapToScreen(Point(curMall.size.x / 2.0, 40.0))
+                val headerText = "🏢 ${curMall.name} • Floor ${if (floor.number >= 0) "+${floor.number}" else floor.number}"
+                val layout = measurer.measure(
+                    text = headerText,
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                val pillW = layout.size.width + 16f
+                val pillH = layout.size.height + 6f
+                val topLeft = Offset(topCenter.x - pillW / 2f, topCenter.y - pillH - 6f)
+
+                context.drawScope.drawRoundRect(
+                    color = Color(0xEE0F172A),
+                    topLeft = topLeft,
+                    size = Size(pillW, pillH),
+                    cornerRadius = CornerRadius(6f, 6f)
+                )
+                context.drawScope.drawText(
+                    textLayoutResult = layout,
+                    topLeft = Offset(topLeft.x + 8f, topLeft.y + 3f)
+                )
+            }
+        }
+    }
+}

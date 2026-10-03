@@ -10,6 +10,10 @@ data class BoundingBox(
         return point.latitude in south..north && point.longitude in west..east
     }
 
+    fun intersects(other: BoundingBox): Boolean {
+        return !(other.west > east || other.east < west || other.south > north || other.north < south)
+    }
+
     val center: GeoPoint
         get() = GeoPoint((north + south) / 2.0, (east + west) / 2.0)
 
