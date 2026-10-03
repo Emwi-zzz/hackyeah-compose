@@ -33,12 +33,14 @@ data class Store(
 data class Elevator(
     val id: Long,
     val coordinates: Point,
+    val isAccessible: Boolean = true,
 )
 
 data class Escalator(
     val id: Long,
     val coordinates: Point,
-    val direction: EscalatorDirection = EscalatorDirection.UP
+    val direction: EscalatorDirection = EscalatorDirection.UP,
+    val isAccessible: Boolean = false,
 )
 
 data class Floor(
@@ -47,6 +49,7 @@ data class Floor(
     val stores: List<Store>,
     val elevators: List<Elevator>,
     val escalators: List<Escalator>,
+    val voids: List<Path2D> = emptyList(),
 )
 
 data class Mall(

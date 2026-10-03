@@ -1,8 +1,12 @@
 package backend
 
+import api.NavLocationDto
+import api.PointDto
 import backend.data.MallCatalog
 import backend.db.PostgresMallRepository
 import backend.routing.IndoorRoutingService
+import sklepsearch.*
+import kotlin.math.hypot
 import kotlin.test.*
 
 class IndoorRoutingServiceTest {
@@ -21,7 +25,7 @@ class IndoorRoutingServiceTest {
     @Test
     fun exitNamesComeFromDatabase() {
         val exits = service.navLocations(krakowska).filter { it.type == "EXIT" }.map { it.name }
-        assertEquals("Main Entrance (Kraków Główny / Pawia)", exits.first())
+        assertEquals("North entrance (Station Square)", exits.first())
         val mall = catalog.find(1L)!!
         assertEquals(mall.entryPointNames, exits)
     }
@@ -45,5 +49,75 @@ class IndoorRoutingServiceTest {
         val route = service.calculateRoute(krakowska, from, to).getOrThrow()
         assertEquals(listOf(-1, 0, 1), route.levels.map { it.floorNumber })
         route.levels.forEach { assertTrue(it.waypoints.isNotEmpty()) }
+    }
+
+    @Test
+    fun accessibleRouteUsesAccessibleVerticalConnections() {
+        val locations = service.navLocations(krakowska)
+        val from = locations.first { it.floorNumber == -1 && it.type == "STORE" }
+        val to = locations.first { it.floorNumber == 1 && it.type == "STORE" }
+        val route = service.calculateRoute(krakowska, from, to, accessibleOnly = true).getOrThrow()
+
+        assertEquals(listOf(-1, 0, 1), route.levels.map { it.floorNumber })
+    }
+
+    @Test
+    fun singleFloorRouteAvoidsShopsAndFloorVoids() {
+        val mall = Mall(
+            id = 99,
+            name = "Test mall",
+            size = Size(100, 100),
+            upperLeft = GeoPoint(19.0, 50.0),
+            downRight = GeoPoint(19.001, 49.999),
+            minFloor = 0,
+            entryPoints = emptyList(),
+            floors = listOf(
+                Floor(
+                    number = 0,
+                    box = Path2D.rectangle(0.0, 0.0, 100.0, 100.0),
+                    stores = listOf(
+                        Store(
+                            Instanceid = 1,
+                            Shopid = 1,
+                            name = "Obstacle shop",
+                            area = Path2D.rectangle(35.0, 25.0, 10.0, 50.0),
+                            entryPoints = listOf(Point(35.0, 50.0))
+                        )
+                    ),
+                    elevators = emptyList(),
+                    escalators = emptyList(),
+                    voids = listOf(Path2D.rectangle(55.0, 25.0, 10.0, 50.0))
+                )
+            )
+        )
+        val start = NavLocationDto("start", "Start", "STORE", 0, PointDto(10.0, 50.0))
+        val end = NavLocationDto("end", "End", "STORE", 0, PointDto(90.0, 50.0))
+
+        val route = service.calculateRoute(mall, start, end).getOrThrow()
+        val blockedAreas = mall.floors.single().stores.map { it.area } + mall.floors.single().voids
+
+        assertTrue(route.levels.single().waypoints.size > 2)
+        route.levels.single().waypoints.zipWithNext().forEach { (a, b) ->
+            for (step in 1..9) {
+                val t = step / 10.0
+                val point = Point(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+                assertTrue(blockedAreas.none { strictlyInside(it, point) }, "Route crosses a blocked area at $point")
+            }
+        }
+    }
+
+    private fun strictlyInside(path: Path2D, point: Point): Boolean {
+        if (!path.contains(point)) return false
+        val vertices = path.getVertices()
+        return vertices.indices.none { index ->
+            val a = vertices[index]
+            val b = vertices[(index + 1) % vertices.size]
+            val dx = b.x - a.x
+            val dy = b.y - a.y
+            val lengthSquared = dx * dx + dy * dy
+            val t = if (lengthSquared == 0.0) 0.0 else
+                (((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
+            hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy)) < 1e-4
+        }
     }
 }

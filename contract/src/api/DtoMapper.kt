@@ -38,8 +38,11 @@ object DtoMapper {
         outline = box.toPolygon(),
         outlineSvg = box.toSvgPath(),
         stores = stores.map { it.toDto() },
-        elevators = elevators.map { ElevatorDto(it.id, it.coordinates.toDto()) },
-        escalators = escalators.map { EscalatorDto(it.id, it.coordinates.toDto(), it.direction.name) },
+        elevators = elevators.map { ElevatorDto(it.id, it.coordinates.toDto(), it.isAccessible) },
+        escalators = escalators.map {
+            EscalatorDto(it.id, it.coordinates.toDto(), it.direction.name, it.isAccessible)
+        },
+        voids = voids.map { it.toSvgPath() },
     )
 
     fun Store.toDto() = StoreDto(
@@ -70,10 +73,13 @@ object DtoMapper {
                         category = s.category, description = s.description,
                     )
                 },
-                elevators = f.elevators.map { Elevator(it.id, it.position.toDomain()) },
+                elevators = f.elevators.map { Elevator(it.id, it.position.toDomain(), it.isAccessible) },
                 escalators = f.escalators.map {
-                    Escalator(it.id, it.position.toDomain(), EscalatorDirection.valueOf(it.direction))
+                    Escalator(
+                        it.id, it.position.toDomain(), EscalatorDirection.valueOf(it.direction), it.isAccessible
+                    )
                 },
+                voids = f.voids.map { Path2D.fromSvgPath(it) },
             )
         },
     )

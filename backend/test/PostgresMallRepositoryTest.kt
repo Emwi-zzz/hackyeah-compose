@@ -1,5 +1,7 @@
 package backend
 
+import api.DtoMapper.toDomain
+import api.DtoMapper.toDto
 import backend.db.PostgresMallRepository
 import sklepsearch.*
 import kotlin.test.*
@@ -12,8 +14,12 @@ class PostgresMallRepositoryTest {
         assertFalse(repo.isEmpty())
         assertEquals(listOf(1L, 2L), repo.findAll().map { it.id })
         val krakowska = assertNotNull(repo.findById(1))
-        assertEquals(listOf(-1, 0, 1, 2), krakowska.floors.map { it.number })
+        assertEquals(Size(124, 358), krakowska.size)
+        assertEquals(listOf(-1, 0, 1), krakowska.floors.map { it.number })
+        assertEquals(176, krakowska.floors.sumOf { it.stores.size })
+        assertEquals(listOf(0, 1, 8), krakowska.floors.map { it.voids.size })
         assertTrue(krakowska.floors.all { it.stores.isNotEmpty() && it.stores.all { s -> s.entryPoints.isNotEmpty() } })
+        assertEquals("Strike Zone Bowling", krakowska.getFloor(-1)!!.stores.first().name)
     }
 
     @Test
@@ -38,5 +44,31 @@ class PostgresMallRepositoryTest {
         assertEquals(store, reloaded.floors[0].stores[0].let { it.copy(area = store.area) })
         assertEquals(2, repo.findAll().size)
         assertNull(repo.findById(999))
+    }
+
+    @Test
+    fun routingGeometryAndAccessibilitySurviveStorage() {
+        val mall = assertNotNull(repo.findById(1))
+        val floor = mall.floors.first()
+        val updatedFloor = floor.copy(
+            elevators = floor.elevators.mapIndexed { index, elevator ->
+                if (index == 0) elevator.copy(isAccessible = false) else elevator
+            },
+            escalators = floor.escalators.mapIndexed { index, escalator ->
+                if (index == 0) escalator.copy(isAccessible = true) else escalator
+            },
+            voids = listOf(Path2D.rectangle(450.0, 450.0, 20.0, 20.0))
+        )
+        repo.save(mall.copy(floors = mall.floors.map { if (it.number == floor.number) updatedFloor else it }))
+
+        val reloaded = assertNotNull(repo.findById(mall.id)).floors.first()
+        assertEquals(updatedFloor.voids.single().toSvgPath(), reloaded.voids.single().toSvgPath())
+        assertFalse(reloaded.elevators.first().isAccessible)
+        assertTrue(reloaded.escalators.first().isAccessible)
+
+        val apiRoundTrip = assertNotNull(repo.findById(mall.id)).toDto().toDomain().floors.first()
+        assertEquals(reloaded.voids.single().toSvgPath(), apiRoundTrip.voids.single().toSvgPath())
+        assertFalse(apiRoundTrip.elevators.first().isAccessible)
+        assertTrue(apiRoundTrip.escalators.first().isAccessible)
     }
 }

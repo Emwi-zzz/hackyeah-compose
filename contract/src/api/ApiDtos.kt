@@ -54,6 +54,8 @@ data class FloorDto(
     val stores: List<StoreDto>,
     val elevators: List<ElevatorDto>,
     val escalators: List<EscalatorDto>,
+    /** SVG paths for floor areas that cannot be walked through, such as atria. */
+    val voids: List<String> = emptyList(),
 )
 
 @Serializable
@@ -69,10 +71,15 @@ data class StoreDto(
 )
 
 @Serializable
-data class ElevatorDto(val id: Long, val position: PointDto)
+data class ElevatorDto(val id: Long, val position: PointDto, val isAccessible: Boolean = true)
 
 @Serializable
-data class EscalatorDto(val id: Long, val position: PointDto, val direction: String) // "UP" | "DOWN"
+data class EscalatorDto(
+    val id: Long,
+    val position: PointDto,
+    val direction: String,
+    val isAccessible: Boolean = false
+) // "UP" | "DOWN"
 
 @Serializable
 data class NavLocationDto(

@@ -62,19 +62,27 @@ class PostgresMallRepository(private val ds: DataSource) : MallRepository {
             )
         }.groupBy({ it.first }, { it.second })
 
-        val elevators = query(c, "SELECT floor_number, id, x, y FROM elevators WHERE mall_id = ? ORDER BY floor_number, id", id) {
-            it.getInt(1) to Elevator(it.getLong(2), Point(it.getDouble(3), it.getDouble(4)))
+        val elevators = query(c, "SELECT floor_number, id, x, y, is_accessible FROM elevators WHERE mall_id = ? ORDER BY floor_number, id", id) {
+            it.getInt(1) to Elevator(it.getLong(2), Point(it.getDouble(3), it.getDouble(4)), it.getBoolean(5))
         }.groupBy({ it.first }, { it.second })
 
-        val escalators = query(c, "SELECT floor_number, id, x, y, direction FROM escalators WHERE mall_id = ? ORDER BY floor_number, id", id) {
-            it.getInt(1) to Escalator(it.getLong(2), Point(it.getDouble(3), it.getDouble(4)), EscalatorDirection.valueOf(it.getString(5)))
+        val escalators = query(c, "SELECT floor_number, id, x, y, direction, is_accessible FROM escalators WHERE mall_id = ? ORDER BY floor_number, id", id) {
+            it.getInt(1) to Escalator(
+                it.getLong(2), Point(it.getDouble(3), it.getDouble(4)),
+                EscalatorDirection.valueOf(it.getString(5)), it.getBoolean(6)
+            )
+        }.groupBy({ it.first }, { it.second })
+
+        val voids = query(c, "SELECT floor_number, outline FROM floor_voids WHERE mall_id = ? ORDER BY floor_number, idx", id) {
+            it.getInt(1) to Path2D.fromSvgPath(it.getString(2))
         }.groupBy({ it.first }, { it.second })
 
         val floors = query(c, "SELECT number, outline FROM floors WHERE mall_id = ? ORDER BY number", id) {
             val n = it.getInt(1)
             Floor(
                 number = n, box = Path2D.fromSvgPath(it.getString(2)),
-                stores = stores[n].orEmpty(), elevators = elevators[n].orEmpty(), escalators = escalators[n].orEmpty()
+                stores = stores[n].orEmpty(), elevators = elevators[n].orEmpty(), escalators = escalators[n].orEmpty(),
+                voids = voids[n].orEmpty()
             )
         }
 
@@ -142,16 +150,24 @@ class PostgresMallRepository(private val ds: DataSource) : MallRepository {
                 }
             }
             for (e in f.elevators) {
-                c.prepareStatement("INSERT INTO elevators VALUES (?,?,?,?,?)").use {
+                c.prepareStatement("INSERT INTO elevators (mall_id, floor_number, id, x, y, is_accessible) VALUES (?,?,?,?,?,?)").use {
                     it.setLong(1, mall.id); it.setInt(2, f.number); it.setLong(3, e.id)
-                    it.setDouble(4, e.coordinates.x); it.setDouble(5, e.coordinates.y); it.executeUpdate()
+                    it.setDouble(4, e.coordinates.x); it.setDouble(5, e.coordinates.y)
+                    it.setBoolean(6, e.isAccessible); it.executeUpdate()
                 }
             }
             for (e in f.escalators) {
-                c.prepareStatement("INSERT INTO escalators VALUES (?,?,?,?,?,?)").use {
+                c.prepareStatement("INSERT INTO escalators (mall_id, floor_number, id, x, y, direction, is_accessible) VALUES (?,?,?,?,?,?,?)").use {
                     it.setLong(1, mall.id); it.setInt(2, f.number); it.setLong(3, e.id)
                     it.setDouble(4, e.coordinates.x); it.setDouble(5, e.coordinates.y); it.setString(6, e.direction.name)
+                    it.setBoolean(7, e.isAccessible)
                     it.executeUpdate()
+                }
+            }
+            f.voids.forEachIndexed { i, void ->
+                c.prepareStatement("INSERT INTO floor_voids (mall_id, floor_number, idx, outline) VALUES (?,?,?,?)").use {
+                    it.setLong(1, mall.id); it.setInt(2, f.number); it.setInt(3, i)
+                    it.setString(4, void.toSvgPath()); it.executeUpdate()
                 }
             }
         }
