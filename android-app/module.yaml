@@ -1,0 +1,11 @@
+product: android/app
+
+dependencies:
+  - ../shared
+  - androidx.activity:activity-compose:1.13.0
+
+settings:
+  compose: enabled
+  junit: junit-4
+  android:
+    namespace: hello.world
