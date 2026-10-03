@@ -31,4 +31,26 @@ actual object PlatformHttp {
             } else null
         }.getOrNull()
     }
+
+    actual suspend fun request(
+        method: String,
+        url: String,
+        headers: Map<String, String>,
+        body: String?
+    ): HttpResult? = withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = URI(url).toURL().openConnection() as HttpURLConnection
+            conn.requestMethod = method
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+            headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+            if (body != null) {
+                conn.doOutput = true
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            }
+            val status = conn.responseCode
+            val stream = if (status in 200..299) conn.inputStream else conn.errorStream
+            HttpResult(status, stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: "")
+        }.getOrNull()
+    }
 }

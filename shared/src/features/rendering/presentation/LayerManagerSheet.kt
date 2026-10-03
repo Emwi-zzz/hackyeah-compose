@@ -22,6 +22,9 @@ fun LayerManagerSheet(
     mapState: MapState,
     modifier: Modifier = Modifier
 ) {
+    // Subscribes this sheet to visibility/opacity changes of layers
+    mapState.layerRegistry.revision
+
     Surface(
         modifier = modifier
             .width(360.dp)

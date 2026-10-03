@@ -1,5 +1,7 @@
 modules:
   - android-app
+  - backend
+  - contract
   - ios-app
   - jvm-app
   - shared

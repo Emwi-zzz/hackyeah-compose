@@ -57,5 +57,9 @@ data class Mall(
     val downRight: GeoPoint,
     val minFloor: Int,
     val entryPoints: List<Point>,
+    // parallel to entryPoints; may be shorter if names are unknown
+    val entryPointNames: List<String> = emptyList(),
     val floors: List<Floor>,
+    // Building footprint shown when no floor details are visible; falls back to a floor box when null
+    val outline: Path2D? = null,
 )

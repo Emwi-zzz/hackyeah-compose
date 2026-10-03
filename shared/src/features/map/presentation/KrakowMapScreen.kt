@@ -15,6 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import features.admin.domain.AdminState
+import features.admin.layers.AdminDraftLayer
+import features.admin.presentation.AdminPanel
+import features.admin.presentation.AdminToggleButton
 import features.indoor.presentation.FloorSelectorControl
 import features.indoor.presentation.IndoorBuildingLayer
 import features.indoor.presentation.IndoorRouteSearchBar
@@ -31,8 +35,6 @@ import features.rendering.domain.LayerRegistry
 import features.rendering.layers.TileLayer
 import features.rendering.presentation.LayerManagerSheet
 import features.rendering.presentation.RenderDebugOverlay
-import sklepsearch.MockGaleriaKazimierz
-import sklepsearch.MockGaleriaKrakowska
 import sklepsearch.getFloor
 
 @Composable
@@ -47,8 +49,6 @@ fun KrakowMapScreen() {
     // 2. Clear old on-top draws; register base map tile layer and indoor building layer
     val indoorBuildingLayer = remember {
         IndoorBuildingLayer(
-            malls = listOf(MockGaleriaKrakowska.INSTANCE, MockGaleriaKazimierz.INSTANCE),
-            focusedMall = MockGaleriaKrakowska.INSTANCE,
             selectedFloorNumber = 0
         )
     }
@@ -71,6 +71,12 @@ fun KrakowMapScreen() {
             layerRegistry = layerRegistry,
             scope = coroutineScope
         )
+    }
+
+    val adminState = remember {
+        AdminState(mapState, coroutineScope).also { admin ->
+            layerRegistry.registerLayer(AdminDraftLayer({ admin.points.toList() }, { admin.isDrawingPolygon }))
+        }
     }
 
     MaterialTheme {
@@ -234,6 +240,19 @@ fun KrakowMapScreen() {
                 )
             }
 
+            // Overlays: Admin panel
+            AdminToggleButton(
+                admin = adminState,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+            )
+            if (adminState.isOpen) {
+                AdminPanel(
+                    admin = adminState,
+                    mapState = mapState,
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 70.dp)
+                )
+            }
+
             // Overlays: Engine Stats
             if (mapState.isDebugStatsOpen) {
                 RenderDebugOverlay(
@@ -246,3 +265,4 @@ fun KrakowMapScreen() {
         }
     }
 }
+

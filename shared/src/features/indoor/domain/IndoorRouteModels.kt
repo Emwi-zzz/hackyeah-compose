@@ -1,5 +1,6 @@
 package features.indoor.domain
 
+import sklepsearch.Mall
 import sklepsearch.Path2D
 import sklepsearch.Point
 
@@ -50,6 +51,10 @@ data class IndoorRoute(
 )
 
 interface IndoorRoutingRepository {
+    suspend fun getMalls(): Result<List<Mall>>
+
+    suspend fun getNavLocations(mallId: Long): Result<List<NavLocation>>
+
     suspend fun calculateRoute(
         mallId: Long,
         start: NavLocation,

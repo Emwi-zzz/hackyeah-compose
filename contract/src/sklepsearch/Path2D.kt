@@ -321,7 +321,7 @@ class Path2D(
          */
         fun fromSvgPath(svg: String): Path2D {
             val path = Path2D()
-            val clean = svg.replace(Regex("([a-zA-Z])"), " $1 ").replace(',', ' ').trim()
+            val clean = svg.replace(Regex("(?<![0-9.])([a-zA-Z])|(?<=[0-9.])([a-df-zA-DF-Z])")) { " ${it.value} " }.replace(',', ' ').trim()
             if (clean.isEmpty()) return path
 
             val tokens = clean.split(Regex("\\s+")).filter { it.isNotEmpty() }

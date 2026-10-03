@@ -23,15 +23,13 @@ class IndoorBuildingLayer(
     override var isVisible: Boolean = true,
     override var opacity: Float = 1.0f,
     override val zIndex: Int = 10,
-    var malls: List<Mall> = listOf(MockGaleriaKrakowska.INSTANCE, MockGaleriaKazimierz.INSTANCE),
-    var focusedMall: Mall? = MockGaleriaKrakowska.INSTANCE,
+    var malls: List<Mall> = emptyList(),
+    var focusedMall: Mall? = null,
     var selectedFloorNumber: Int = 0,
     var selectedStore: Store? = null,
     var activeRoute: IndoorRoute? = null,
     var textMeasurer: TextMeasurer? = null
 ) : MapLayer {
-
-    val mall: Mall get() = focusedMall ?: malls.firstOrNull() ?: MockGaleriaKrakowska.INSTANCE
 
     companion object {
         const val DETAIL_ZOOM_THRESHOLD = 15.5
@@ -109,23 +107,24 @@ class IndoorBuildingLayer(
             // When scale is large (zoom < 15.5) OR if the building is not focused:
             // ONLY the outline should be rendered!
             if (!isDetailedView || !isFocused) {
+                val footprintPath = curMall.outline?.let { pathToScreen(it) } ?: floorBoxPath
                 // Drop shadow under outline
                 context.drawScope.drawPath(
-                    path = floorBoxPath,
+                    path = footprintPath,
                     color = Color.Black.copy(alpha = 0.15f * opacity),
                     style = Stroke(width = if (isFocused) 5f else 3f)
                 )
 
                 // Building footprint fill
                 context.drawScope.drawPath(
-                    path = floorBoxPath,
+                    path = footprintPath,
                     color = (if (isFocused) Color(0xFFEFF6FF) else Color(0xFFF1F5F9)).copy(alpha = opacity),
                     style = Fill
                 )
 
                 // Building outline stroke
                 context.drawScope.drawPath(
-                    path = floorBoxPath,
+                    path = footprintPath,
                     color = (if (isFocused) Color(0xFF2563EB) else Color(0xFF64748B)).copy(alpha = opacity),
                     style = Stroke(width = if (isFocused) 3.5f else 2.2f)
                 )
@@ -570,3 +569,4 @@ class IndoorBuildingLayer(
         }
     }
 }
+

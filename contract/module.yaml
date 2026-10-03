@@ -1,0 +1,10 @@
+product:
+  type: kmp/lib
+  platforms: [ jvm, android, iosArm64, iosSimulatorArm64, wasmJs ]
+
+dependencies:
+  - org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0: exported
+
+settings:
+  kotlin:
+    serialization: json

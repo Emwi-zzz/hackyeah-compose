@@ -46,47 +46,10 @@ class Path2DTest {
     }
 
     @Test
-    fun testMallCoordinateTransformation() {
-        val mall = MockGaleriaKrakowska.INSTANCE
-        val centerPoint = Point(500.0, 500.0)
-
-        // Convert Point -> GeoPoint -> Point
-        val geo = mall.pointToGeo(centerPoint)
-        val reconstructed = mall.geoToPoint(geo)
-
-        assertTrue(kotlin.math.abs(centerPoint.x - reconstructed.x) < 1e-4, "X roundtrip should match")
-        assertTrue(kotlin.math.abs(centerPoint.y - reconstructed.y) < 1e-4, "Y roundtrip should match")
-    }
-
-    @Test
-    fun testFindStoreAtPoint() {
-        val mall = MockGaleriaKrakowska.INSTANCE
-        val floor0 = mall.getFloor(0)
-        assertNotNull(floor0, "Floor 0 should exist")
-
-        // Point inside left wing (x: 80 to 420, first store is Zara)
-        val foundStore = mall.findStoreAt(Point(200.0, 120.0), 0)
-        assertNotNull(foundStore, "Should find store in left wing")
-        assertEquals("Zara", foundStore.name)
-
-        // Point in corridor (x: 500)
-        val corridorHit = mall.findStoreAt(Point(500.0, 500.0), 0)
-        assertNull(corridorHit, "Central corridor should not hit any store")
-    }
-
-    @Test
-    fun testEscalatorDirection() {
-        val mall = MockGaleriaKrakowska.INSTANCE
-        val floor0 = mall.getFloor(0)
-        assertNotNull(floor0)
-
-        val upEscalator = floor0.escalators.find { it.direction == EscalatorDirection.UP }
-        val downEscalator = floor0.escalators.find { it.direction == EscalatorDirection.DOWN }
-
-        assertNotNull(upEscalator, "Floor 0 should have UP escalator")
-        assertNotNull(downEscalator, "Floor 0 should have DOWN escalator")
-        assertEquals(EscalatorDirection.UP, upEscalator.direction)
-        assertEquals(EscalatorDirection.DOWN, downEscalator.direction)
+    fun testSvgRoundTripWithExponentNumbers() {
+        val path = Path2D().moveTo(1.0E-4, 5.0).lineTo(2.5E7, -3.0E-5).quadTo(1.0, 1.0, 2.0, 2.0).closePath()
+        val parsed = Path2D.fromSvgPath(path.toSvgPath())
+        assertEquals(path.segments, parsed.segments)
     }
 
     @Test

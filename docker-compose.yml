@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: malls
+      POSTGRES_USER: malls
+      POSTGRES_PASSWORD: malls
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U malls -d malls"]
+      interval: 3s
+      retries: 20
+
+volumes:
+  pgdata:

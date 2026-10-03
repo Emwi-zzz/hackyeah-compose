@@ -28,12 +28,3 @@ fun Mall.geoToPoint(geo: core.geometry.GeoPoint): Point {
 
     return Point(u * size.x, v * size.y)
 }
-
-fun Mall.getFloor(floorNumber: Int): Floor? {
-    return floors.find { it.number == floorNumber }
-}
-
-fun Mall.findStoreAt(point: Point, floorNumber: Int): Store? {
-    val floor = getFloor(floorNumber) ?: return null
-    return floor.stores.find { it.area.contains(point) }
-}

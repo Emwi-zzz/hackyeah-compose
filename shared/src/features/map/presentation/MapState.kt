@@ -7,7 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import core.geometry.GeoMath
 import core.geometry.GeoPoint
 import core.geometry.WebMercatorProjection
-import features.indoor.data.IndoorRoutingRepositoryImpl
+import features.indoor.data.RemoteIndoorRoutingRepository
 import features.indoor.domain.*
 import features.indoor.presentation.IndoorBuildingLayer
 import features.map.data.OpenTileSources
@@ -26,7 +26,8 @@ import sklepsearch.*
 class MapState(
     val tileRepository: TileRepository,
     val layerRegistry: LayerRegistry,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    val indoorRoutingRepository: IndoorRoutingRepository = RemoteIndoorRoutingRepository()
 ) {
     var viewport by mutableStateOf(
         MapViewport(
@@ -44,21 +45,21 @@ class MapState(
     var isSearchOpen by mutableStateOf(false)
     var isDebugStatsOpen by mutableStateOf(false)
 
-    // Collection of indoor buildings in Krakow
-    val malls: List<Mall> = listOf(
-        MockGaleriaKrakowska.INSTANCE,
-        MockGaleriaKazimierz.INSTANCE
-    )
+    // Indoor buildings are loaded from the backend (see loadIndoorData)
+    var malls by mutableStateOf<List<Mall>>(emptyList())
+        private set
+    private var navLocationsByMall by mutableStateOf<Map<Long, List<NavLocation>>>(emptyMap())
+    var indoorDataError by mutableStateOf<String?>(null)
+        private set
 
     // Focus state: one active building is in focus based on scale and position, or user click
-    var focusedMall by mutableStateOf<Mall?>(MockGaleriaKrakowska.INSTANCE)
+    var focusedMall by mutableStateOf<Mall?>(null)
     val activeMall: Mall? get() = focusedMall
     var currentFloorNumber by mutableStateOf(0)
     var selectedStore by mutableStateOf<Store?>(null)
     var userLockedMallId by mutableStateOf<Long?>(null)
 
     // Indoor Multi-floor Routing Engine & State
-    val indoorRoutingRepository: IndoorRoutingRepository = IndoorRoutingRepositoryImpl()
     var activeIndoorRoute by mutableStateOf<IndoorRoute?>(null)
     var isIndoorRouteLoading by mutableStateOf(false)
     var indoorRouteError by mutableStateOf<String?>(null)
@@ -70,6 +71,43 @@ class MapState(
 
     private var animationJob: Job? = null
 
+    init {
+        loadIndoorData()
+    }
+
+    /** Loads malls and their navigation targets from the backend. Safe to call again to retry. */
+    fun loadIndoorData() {
+        scope.launch { reloadIndoorData() }
+    }
+
+    /** Reloads indoor data and keeps the focus on the same mall (matched by id). */
+    suspend fun reloadIndoorData(): Boolean {
+        val result = indoorRoutingRepository.getMalls()
+        result.onSuccess { loaded ->
+            indoorDataError = null
+            malls = loaded
+            val focusedId = focusedMall?.id
+            focusedMall = loaded.find { it.id == focusedId } ?: loaded.firstOrNull()
+            val locations = mutableMapOf<Long, List<NavLocation>>()
+            for (mall in loaded) {
+                indoorRoutingRepository.getNavLocations(mall.id).onSuccess { locations[mall.id] = it }
+            }
+            navLocationsByMall = locations
+        }.onFailure {
+            indoorDataError = it.message ?: "Indoor backend is unavailable"
+        }
+        return result.isSuccess
+    }
+
+    /** Admin tools hook: return true to consume a map click. */
+    var mapClickInterceptor: ((GeoPoint) -> Boolean)? = null
+
+    /** Replaces (or adds) a mall in the list, e.g. an admin draft, and focuses it. */
+    fun replaceMall(mall: Mall) {
+        malls = if (malls.any { it.id == mall.id }) malls.map { if (it.id == mall.id) mall else it } else malls + mall
+        focusedMall = mall
+        userLockedMallId = mall.id
+    }
     /**
      * Determines whether the focused mall is on screen and scaled to detailed indoor view.
      */
@@ -148,7 +186,7 @@ class MapState(
 
     fun getAvailableNavLocations(): List<NavLocation> {
         val mall = focusedMall ?: return emptyList()
-        return (indoorRoutingRepository as? IndoorRoutingRepositoryImpl)?.getAllNavLocations(mall.id) ?: emptyList()
+        return navLocationsByMall[mall.id] ?: emptyList()
     }
 
     fun requestIndoorRoute(start: NavLocation, end: NavLocation) {
@@ -296,12 +334,14 @@ class MapState(
             screenHeight = viewport.screenHeight
         )
 
+        if (mapClickInterceptor?.invoke(geo) == true) return
+
         // Check if any building was clicked to refocus or select a store
         val clickedMall = malls.find { mall ->
             val pt = mall.geoToPoint(geo)
             val inBounds = pt.x in -20.0..(mall.size.x + 20.0) && pt.y in -20.0..(mall.size.y + 20.0)
             if (!inBounds) return@find false
-            val floorBox = mall.floors.firstOrNull()?.box
+            val floorBox = mall.outline ?: mall.floors.firstOrNull()?.box
             if (floorBox != null && floorBox.contains(pt)) true else mall.getBoundingBox().contains(geo)
         } ?: malls.find { it.getBoundingBox().contains(geo) }
 
@@ -331,3 +371,4 @@ class MapState(
         selectedStore = null
     }
 }
+
