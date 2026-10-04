@@ -25,8 +25,8 @@ data class PresetLocation(
 )
 
 val KRAKOW_PRESETS = listOf(
-    PresetLocation("🏢", "Galeria Krakowska (Indoor)", GeoPoint(50.0664, 19.9482), 16.5),
-    PresetLocation("🛍️", "Galeria Kazimierz (Indoor)", GeoPoint(50.0528, 19.9580), 16.5),
+    PresetLocation("🏢", "Galeria Krakowska (Indoor)", GeoPoint(50.0675, 19.9462), 16.5),
+    PresetLocation("🛍️", "Galeria Kazimierz (Indoor)", GeoPoint(50.0535, 19.9555), 16.5),
     PresetLocation("🏰", "Wawel Castle", GeoPoint.WAWEL_CASTLE, 15.5),
     PresetLocation("🏛️", "Rynek Główny", GeoPoint.KRAKOW_RYNEK, 16.0),
     PresetLocation("⛪", "Kościół Mariacki", GeoPoint.KOSCIOL_MARIACKI, 16.5),

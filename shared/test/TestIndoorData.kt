@@ -57,7 +57,15 @@ class FakeIndoorRoutingRepository(
         ?.let { Result.success(TestIndoorData.locations(it)) }
         ?: Result.failure(IllegalArgumentException("Mall $mallId not found"))
 
-    override suspend fun calculateRoute(mallId: Long, start: NavLocation, end: NavLocation): Result<IndoorRoute> {
+    var lastAccessibleOnly: Boolean? = null
+
+    override suspend fun calculateRoute(
+        mallId: Long,
+        start: NavLocation,
+        end: NavLocation,
+        accessibleOnly: Boolean
+    ): Result<IndoorRoute> {
+        lastAccessibleOnly = accessibleOnly
         if (malls.none { it.id == mallId }) return Result.failure(IllegalArgumentException("Mall $mallId not found"))
         val levels = listOf(start.floorNumber, end.floorNumber).distinct().map { floor ->
             val pts = listOf(start.coordinates, Point(500.0, 500.0), end.coordinates)

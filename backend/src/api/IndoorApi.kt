@@ -51,7 +51,8 @@ fun Route.indoorApi(catalog: MallCatalog, routing: IndoorRoutingService) {
                 ?: throw ApiException(HttpStatusCode.NotFound, "location_not_found", "Location '$fromId' not found in mall ${mall.id}")
             val end = locations[toId]
                 ?: throw ApiException(HttpStatusCode.NotFound, "location_not_found", "Location '$toId' not found in mall ${mall.id}")
-            val route = routing.calculateRoute(mall, start, end).getOrElse {
+            val accessibleOnly = call.request.queryParameters["accessible"]?.toBooleanStrictOrNull() ?: false
+            val route = routing.calculateRoute(mall, start, end, accessibleOnly).getOrElse {
                 throw ApiException(HttpStatusCode.UnprocessableEntity, "route_failed", it.message ?: "Route failed")
             }
             call.respond(route)

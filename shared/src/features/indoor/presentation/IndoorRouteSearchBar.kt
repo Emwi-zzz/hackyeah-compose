@@ -79,9 +79,17 @@ fun IndoorRouteSearchBar(
                         )
                         if (activeRoute != null) {
                             Text(
-                                text = "${activeRoute.totalDistanceMeters.toInt()} m • ~${activeRoute.estimatedTimeSeconds / 60 + 1} min • ${activeRoute.levels.size} floor${if (activeRoute.levels.size > 1) "s" else ""}",
+                                text = "${activeRoute.totalDistanceMeters.toInt()} m • ~${activeRoute.estimatedTimeSeconds / 60 + 1} min • ${activeRoute.levels.size} floor${if (activeRoute.levels.size > 1) "s" else ""}" +
+                                    if (mapState.isAccessibleRouting) " • ♿" else "",
                                 fontSize = 11.sp,
                                 color = Color(0xFF059669),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else if (mapState.indoorRouteError != null) {
+                            Text(
+                                text = mapState.indoorRouteError!!,
+                                fontSize = 10.sp,
+                                color = Color(0xFFDC2626),
                                 fontWeight = FontWeight.SemiBold
                             )
                         } else {

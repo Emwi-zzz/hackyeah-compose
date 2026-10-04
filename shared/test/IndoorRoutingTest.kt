@@ -87,4 +87,23 @@ class IndoorRoutingTest {
         assertNull(mapState.indoorRouteStartLocation)
         assertNull(mapState.indoorRouteEndLocation)
     }
+
+    @Test
+    fun accessibleToggleRecalculatesRouteWithAccessibleFlag() {
+        val repository = FakeIndoorRoutingRepository()
+        val mapState = createTestMapState(repository)
+        mapState.refocusOnMall(TestIndoorData.krakowska, animate = false)
+        val locations = mapState.getAvailableNavLocations()
+        val start = locations.first { it.type == NavLocationType.EXIT }
+        val end = locations.first { it.type == NavLocationType.STORE }
+
+        mapState.requestIndoorRoute(start, end)
+        assertEquals(false, repository.lastAccessibleOnly)
+
+        repository.lastAccessibleOnly = null
+        mapState.toggleAccessibleRouting()
+        assertTrue(mapState.isAccessibleRouting)
+        assertEquals(true, repository.lastAccessibleOnly, "Toggling should recalculate the open route step-free")
+        assertNotNull(mapState.activeIndoorRoute)
+    }
 }

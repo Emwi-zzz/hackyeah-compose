@@ -15,6 +15,7 @@ import features.indoor.domain.IndoorRoute
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
 import sklepsearch.*
+import kotlin.math.abs
 
 class IndoorBuildingLayer(
     override val id: String = "indoor_building_layer",
@@ -200,19 +201,18 @@ class IndoorBuildingLayer(
                 style = Stroke(width = 3.5f)
             )
 
-            // 2. Draw Walkway / Interior Guidelines (if Galeria Krakowska)
-            if (curMall.id == 1L) {
-                val atriumTop = mapToScreen(Point(450.0, 80.0))
-                val atriumBottom = mapToScreen(Point(450.0, 920.0))
-                val atriumRightTop = mapToScreen(Point(550.0, 80.0))
-                val atriumRightBottom = mapToScreen(Point(550.0, 920.0))
-                context.drawScope.drawLine(
-                    color = Color(0xFFE2E8F0).copy(alpha = opacity),
-                    start = atriumTop, end = atriumBottom, strokeWidth = 1f
+            // 2. Blocked areas: atria / escalator wells open to the floor below, edged by a railing
+            for (void in floor.voids) {
+                val voidPath = pathToScreen(void)
+                context.drawScope.drawPath(
+                    path = voidPath,
+                    color = Color(0xFFDBEAFE).copy(alpha = opacity),
+                    style = Fill
                 )
-                context.drawScope.drawLine(
-                    color = Color(0xFFE2E8F0).copy(alpha = opacity),
-                    start = atriumRightTop, end = atriumRightBottom, strokeWidth = 1f
+                context.drawScope.drawPath(
+                    path = voidPath,
+                    color = Color(0xFF64748B).copy(alpha = opacity),
+                    style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
                 )
             }
 
@@ -269,6 +269,11 @@ class IndoorBuildingLayer(
 
                     val textW = textLayout.size.width
                     val textH = textLayout.size.height
+                    val corner1 = mapToScreen(Point(bounds.minX, bounds.minY))
+                    val corner2 = mapToScreen(Point(bounds.maxX, bounds.maxY))
+                    val fits = textW <= abs(corner2.x - corner1.x) && textH <= abs(corner2.y - corner1.y)
+                    if (!fits && !isSelected) continue
+
                     val textTopLeft = Offset(centerScreen.x - textW / 2f, centerScreen.y - textH / 2f)
 
                     context.drawScope.drawRoundRect(

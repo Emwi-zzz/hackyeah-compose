@@ -218,12 +218,16 @@ class IndoorRoutingService {
         val settled = BooleanArray(nodes.size)
         val visibleCache = HashMap<Triple<Int, Point, Point>, Boolean>()
         best[0] = 0.0
+        // A* estimate: every floor change costs at least MIN_RIDE_COST, so it never overestimates.
+        val estimate = DoubleArray(nodes.size) {
+            distance(nodes[it].point, end.point) + abs(nodes[it].floor - end.floor) * MIN_RIDE_COST
+        }
 
         while (true) {
             var current = -1
             for (i in nodes.indices) {
                 if (!settled[i] && best[i] < Double.POSITIVE_INFINITY &&
-                    (current == -1 || best[i] < best[current])
+                    (current == -1 || best[i] + estimate[i] < best[current] + estimate[current])
                 ) current = i
             }
             if (current == -1) return null
@@ -361,6 +365,7 @@ class IndoorRoutingService {
         const val CURVE_STEPS = 8
         const val ELEVATOR_COST = 60.0
         const val ESCALATOR_COST = 40.0
+        val MIN_RIDE_COST = minOf(ELEVATOR_COST, ESCALATOR_COST)
 
         fun distance(a: Point, b: Point) = hypot(b.x - a.x, b.y - a.y)
 

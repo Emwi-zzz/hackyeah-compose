@@ -131,5 +131,6 @@ object ApiPaths {
     fun adminMall(id: Long) = "$ADMIN_MALLS/$id"
     fun mall(id: Long) = "$MALLS/$id"
     fun locations(id: Long) = "${mall(id)}/locations"
-    fun route(id: Long, fromId: String, toId: String) = "${mall(id)}/route?from=$fromId&to=$toId"
+    fun route(id: Long, fromId: String, toId: String, accessibleOnly: Boolean = false) =
+        "${mall(id)}/route?from=$fromId&to=$toId" + if (accessibleOnly) "&accessible=true" else ""
 }
