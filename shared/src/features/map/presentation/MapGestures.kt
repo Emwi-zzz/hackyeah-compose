@@ -9,7 +9,14 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
+import kotlin.math.abs
 import kotlin.math.ln
+
+internal fun wheelZoomDelta(scrollDeltaY: Float): Double {
+    // Browser wheel events can report CSS-pixel deltas, unlike desktop wheel ticks.
+    val normalizedDelta = if (abs(scrollDeltaY) >= 10f) scrollDeltaY / 100f else scrollDeltaY
+    return -normalizedDelta.toDouble() * 0.25
+}
 
 fun Modifier.mapInteractionGestures(
     mapState: MapState,
@@ -35,7 +42,7 @@ fun Modifier.mapInteractionGestures(
                         PointerEventType.Scroll -> {
                             val scrollDeltaY = change.scrollDelta.y
                             if (scrollDeltaY != 0f) {
-                                val zoomDelta = -scrollDeltaY.toDouble() * 0.25
+                                val zoomDelta = wheelZoomDelta(scrollDeltaY)
                                 mapState.zoomBy(zoomDelta, change.position)
                                 change.consume()
                             }
