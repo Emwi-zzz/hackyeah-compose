@@ -5,7 +5,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextMeasurer
@@ -13,11 +12,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import core.geometry.GeoPoint
+import core.ui.AppColors
 import features.places.domain.Place
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
-import kotlin.math.sin
 
 class PoiMarkerLayer(
     override val id: String = "poi_marker_layer",
@@ -63,7 +61,7 @@ class PoiMarkerLayer(
 
             // Pin drop shadow
             context.drawScope.drawOval(
-                color = Color.Black.copy(alpha = 0.25f * opacity),
+                color = Color.Black.copy(alpha = 0.5f * opacity),
                 topLeft = Offset(screenPos.x - 10f, screenPos.y - 2f),
                 size = Size(20f, 8f)
             )
@@ -117,7 +115,7 @@ class PoiMarkerLayer(
                 val textLayout = measurer.measure(
                     text = labelText,
                     style = TextStyle(
-                        color = Color(0xFF1E293B),
+                        color = AppColors.TextPrimary,
                         fontSize = fontSize,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                     )
@@ -132,13 +130,13 @@ class PoiMarkerLayer(
 
                 // Label pill background
                 context.drawScope.drawRoundRect(
-                    color = Color.White.copy(alpha = 0.95f * opacity),
+                    color = AppColors.Surface.copy(alpha = 0.95f * opacity),
                     topLeft = pillTopLeft,
                     size = Size(pillWidth, pillHeight),
                     cornerRadius = CornerRadius(6f, 6f)
                 )
                 context.drawScope.drawRoundRect(
-                    color = if (isSelected) markerColor.copy(alpha = opacity) else Color(0x33000000),
+                    color = if (isSelected) markerColor.copy(alpha = opacity) else AppColors.BorderStrong.copy(alpha = AppColors.BorderStrong.alpha * opacity),
                     topLeft = pillTopLeft,
                     size = Size(pillWidth, pillHeight),
                     cornerRadius = CornerRadius(6f, 6f),

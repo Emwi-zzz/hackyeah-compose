@@ -1,8 +1,6 @@
 package features.rendering.presentation
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +10,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
@@ -28,9 +29,12 @@ fun RenderDebugOverlay(
     Surface(
         modifier = modifier
             .width(320.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        color = Color(0xF20F172A),
-        shadowElevation = 8.dp
+            .clip(AppShapes.Card),
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        contentColor = AppColors.TextPrimary,
+        border = AppBorder,
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -43,19 +47,19 @@ fun RenderDebugOverlay(
             ) {
                 Text(
                     text = "Engine & Render Tools",
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = Color.White
+                    color = AppColors.TextPrimary
                 )
                 IconButton(
                     onClick = { mapState.isDebugStatsOpen = false },
                     modifier = Modifier.size(20.dp)
                 ) {
-                    Text("✕", fontSize = 12.sp, color = Color.Gray)
+                    Text("✕", fontSize = 12.sp, color = AppColors.TextSecondary)
                 }
             }
 
-            HorizontalDivider(color = Color(0xFF334155))
+            HorizontalDivider(color = AppColors.Border)
 
             // Stats grid
             Row(
@@ -63,40 +67,41 @@ fun RenderDebugOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Viewport Size", fontSize = 9.sp, color = Color(0xFF94A3B8))
+                    Text("Viewport Size", fontSize = 9.sp, color = AppColors.TextMuted)
                     Text(
                         "${mapState.viewport.screenWidth.roundToInt()} × ${mapState.viewport.screenHeight.roundToInt()} px",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = AppColors.TextPrimary
                     )
                 }
                 Column {
-                    Text("Visible Tiles", fontSize = 9.sp, color = Color(0xFF94A3B8))
-                    Text("${tiles.size} tiles", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF38BDF8))
+                    Text("Visible Tiles", fontSize = 9.sp, color = AppColors.TextMuted)
+                    Text("${tiles.size} tiles", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Accent)
                 }
                 Column {
-                    Text("Active Layers", fontSize = 9.sp, color = Color(0xFF94A3B8))
+                    Text("Active Layers", fontSize = 9.sp, color = AppColors.TextMuted)
                     val activeCount = mapState.layerRegistry.layers.count { it.isVisible }
-                    Text("$activeCount / ${mapState.layerRegistry.layers.size}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF4ADE80))
+                    Text("$activeCount / ${mapState.layerRegistry.layers.size}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Success)
                 }
             }
 
             // Visible Geo Bounding Box
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFF1E293B),
+                shape = AppShapes.Control,
+                color = AppColors.SurfaceRaised,
+                border = AppBorder,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text("Visible Geographic Bounds (Krakow)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFCBD5E1))
-                    Text("N: ${bounds.north.format5()}°, S: ${bounds.south.format5()}°", fontSize = 9.sp, color = Color(0xFF94A3B8))
-                    Text("W: ${bounds.west.format5()}°, E: ${bounds.east.format5()}°", fontSize = 9.sp, color = Color(0xFF94A3B8))
+                    Text("Visible Geographic Bounds (Krakow)", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextSecondary)
+                    Text("N: ${bounds.north.format5()}°, S: ${bounds.south.format5()}°", fontSize = 9.sp, color = AppColors.TextMuted)
+                    Text("W: ${bounds.west.format5()}°, E: ${bounds.east.format5()}°", fontSize = 9.sp, color = AppColors.TextMuted)
                 }
             }
 
             // Custom Render Layer Injector
-            Text("Custom Render Tools:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFCBD5E1))
+            Text("Custom Render Tools:", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextSecondary)
 
             var isDemoGridInjected by remember { mutableStateOf(false) }
 
@@ -123,7 +128,7 @@ fun RenderDebugOverlay(
                                     val start = context.geoToScreen(core.geometry.GeoPoint(lat, b.west))
                                     val end = context.geoToScreen(core.geometry.GeoPoint(lat, b.east))
                                     context.drawScope.drawLine(
-                                        color = Color(0xFF06B6D4).copy(alpha = opacity),
+                                        color = Color(0xFF22D3EE).copy(alpha = opacity),
                                         start = start,
                                         end = end,
                                         strokeWidth = 1f
@@ -137,9 +142,10 @@ fun RenderDebugOverlay(
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDemoGridInjected) Color(0xFFDC2626) else Color(0xFF2563EB)
+                    containerColor = if (isDemoGridInjected) AppColors.DangerSoft else AppColors.Accent,
+                    contentColor = if (isDemoGridInjected) AppColors.Danger else AppColors.OnAccent
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppShapes.Control,
                 modifier = Modifier.fillMaxWidth().height(32.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
@@ -153,8 +159,9 @@ fun RenderDebugOverlay(
             // Cache flush
             OutlinedButton(
                 onClick = { mapState.tileRepository.clearCache() },
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFCBD5E1)),
+                shape = AppShapes.Control,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.TextSecondary),
+                border = AppBorder,
                 modifier = Modifier.fillMaxWidth().height(30.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {

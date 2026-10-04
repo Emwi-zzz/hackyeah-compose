@@ -3,11 +3,14 @@ package features.admin.layers
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import core.ui.AppColors
 import features.admin.domain.AdminShapeFactory
 import core.geometry.GeoPoint
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
 import sklepsearch.Point
+
+private val CurveControlColor = Color(0xFFC084FC)
 
 /** Draws the polygon the admin is currently tracing on the map. */
 class AdminDraftLayer(
@@ -34,7 +37,7 @@ class AdminDraftLayer(
         val pendingEscalator = pendingEscalatorProvider()
         if (pts.isEmpty() && vertexHandles.isEmpty() && curveControlHandles.isEmpty() && pendingEscalator == null) return
         val screen = pts.map { context.geoToScreen(it) }
-        val color = Color(0xFFF59E0B)
+        val color = AppColors.Accent
         val scope = context.drawScope
         val previewPoint = previewPointProvider()?.let(context::geoToScreen)
 
@@ -74,18 +77,18 @@ class AdminDraftLayer(
         vertexHandles.forEach { point ->
             val handle = context.geoToScreen(point)
             scope.drawCircle(Color.White, radius = 8f, center = handle)
-            scope.drawCircle(Color(0xFF2563EB), radius = 8f, center = handle, style = Stroke(width = 2.5f))
-            scope.drawCircle(Color(0xFF2563EB), radius = 2.5f, center = handle)
+            scope.drawCircle(AppColors.AccentStrong, radius = 8f, center = handle, style = Stroke(width = 2.5f))
+            scope.drawCircle(AppColors.AccentStrong, radius = 2.5f, center = handle)
         }
         curveControlHandles.forEach { point ->
             val handle = context.geoToScreen(point)
             scope.drawCircle(Color.White, radius = 7f, center = handle)
-            scope.drawCircle(Color(0xFF9333EA), radius = 7f, center = handle, style = Stroke(width = 2.5f))
-            scope.drawCircle(Color(0xFF9333EA), radius = 2f, center = handle)
+            scope.drawCircle(CurveControlColor, radius = 7f, center = handle, style = Stroke(width = 2.5f))
+            scope.drawCircle(CurveControlColor, radius = 2f, center = handle)
         }
         pendingEscalator?.let { (geo, isUp) ->
             val center = context.geoToScreen(geo)
-            val bg = if (isUp) Color(0xFF059669) else Color(0xFFD97706)
+            val bg = if (isUp) AppColors.Success else AppColors.Warning
             val topLeft = Offset(center.x - 14f, center.y - 9f)
             val size = androidx.compose.ui.geometry.Size(28f, 18f)
             val corner = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
@@ -93,8 +96,8 @@ class AdminDraftLayer(
             scope.drawRoundRect(Color.White, topLeft, size, corner, style = Stroke(width = 2f))
             val arrow = if (isUp) -1f else 1f
             val tip = Offset(center.x, center.y + 4f * arrow)
-            scope.drawLine(Color.White, tip, Offset(center.x - 4f, center.y - 2f * arrow), strokeWidth = 2f)
-            scope.drawLine(Color.White, tip, Offset(center.x + 4f, center.y - 2f * arrow), strokeWidth = 2f)
+            scope.drawLine(AppColors.Background, tip, Offset(center.x - 4f, center.y - 2f * arrow), strokeWidth = 2f)
+            scope.drawLine(AppColors.Background, tip, Offset(center.x + 4f, center.y - 2f * arrow), strokeWidth = 2f)
         }
     }
 

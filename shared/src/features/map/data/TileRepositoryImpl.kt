@@ -22,7 +22,9 @@ class TileRepositoryImpl(
 
     private val headers = mapOf(
         "User-Agent" to "KrakowMapViewer/1.0 (KotlinMultiplatform; CleanArchitecture; Krakow)",
-        "Accept" to "image/png,image/jpeg,image/*;q=0.9"
+        "Accept" to "image/png,image/jpeg,image/*;q=0.9",
+        // Stadia allows local/dev use when the request looks like it comes from localhost
+        "Referer" to "http://localhost/"
     )
 
     private fun makeKey(coord: TileCoordinate, source: TileSource): String {
@@ -68,6 +70,7 @@ class TileRepositoryImpl(
         source: TileSource,
         cacheKey: String
     ): ImageBitmap? {
+        if (coord.zoom !in source.minZoom..source.maxZoom) return null
         val url = source.getTileUrl(coord)
         val bytes = PlatformHttp.getBytes(url, headers) ?: return null
         return runCatching {

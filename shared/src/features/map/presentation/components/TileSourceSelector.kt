@@ -1,19 +1,19 @@
 package features.map.presentation.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.data.OpenTileSources
 import features.map.presentation.MapState
 
@@ -23,12 +23,11 @@ fun TileSourceSelector(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier
-            .width(320.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        color = Color.White.copy(alpha = 0.98f),
-        shadowElevation = 8.dp,
-        tonalElevation = 3.dp
+        modifier = modifier.width(320.dp),
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        border = AppBorder,
+        shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -41,39 +40,36 @@ fun TileSourceSelector(
             ) {
                 Text(
                     text = "Open Base Map Style",
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = Color(0xFF0F172A)
+                    color = AppColors.TextPrimary
                 )
                 IconButton(
                     onClick = { mapState.isTileSelectorOpen = false },
                     modifier = Modifier.size(24.dp)
                 ) {
-                    Text("✕", fontSize = 14.sp, color = Color.Gray)
+                    Text("✕", fontSize = 14.sp, color = AppColors.TextMuted)
                 }
             }
 
             Text(
                 text = "Live dynamic tiles streamed from open APIs without keys",
                 fontSize = 11.sp,
-                color = Color(0xFF64748B)
+                color = AppColors.TextMuted
             )
 
-            HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(color = AppColors.Border)
 
             for (source in OpenTileSources.ALL) {
                 val isSelected = mapState.activeTileSource.id == source.id
 
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                    shape = AppShapes.Control,
+                    color = if (isSelected) AppColors.AccentSoft else AppColors.SurfaceRaised,
+                    border = if (isSelected) BorderStroke(1.5.dp, AppColors.Accent) else AppBorder,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(
-                            width = if (isSelected) 2.dp else 1.dp,
-                            color = if (isSelected) Color(0xFF3B82F6) else Color(0xFFE2E8F0),
-                            shape = RoundedCornerShape(10.dp)
-                        )
+                        .clip(AppShapes.Control)
                         .clickable {
                             mapState.activeTileSource = source
                         }
@@ -88,19 +84,23 @@ fun TileSourceSelector(
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { mapState.activeTileSource = source },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = AppColors.Accent,
+                                    unselectedColor = AppColors.TextMuted
+                                ),
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
                                 text = source.name,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
-                                color = if (isSelected) Color(0xFF1D4ED8) else Color(0xFF1E293B)
+                                color = if (isSelected) AppColors.Accent else AppColors.TextPrimary
                             )
                         }
                         Text(
                             text = source.description,
                             fontSize = 11.sp,
-                            color = Color(0xFF64748B),
+                            color = AppColors.TextMuted,
                             modifier = Modifier.padding(start = 28.dp, top = 2.dp)
                         )
                     }

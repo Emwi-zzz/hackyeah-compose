@@ -1,20 +1,20 @@
 package features.map.presentation.components
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 
 @Composable
@@ -30,10 +30,10 @@ fun MapControls(
     ) {
         // Zoom controls block
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color.White.copy(alpha = 0.95f),
-            shadowElevation = 4.dp,
-            tonalElevation = 2.dp
+            shape = AppShapes.Control,
+            color = AppColors.Surface,
+            border = AppBorder,
+            shadowElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier.width(44.dp)
@@ -45,10 +45,10 @@ fun MapControls(
                         .clickable { mapState.zoomIn() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("+", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
                 }
 
-                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+                HorizontalDivider(color = AppColors.Border, thickness = 1.dp)
 
                 // Zoom Out
                 Box(
@@ -57,69 +57,54 @@ fun MapControls(
                         .clickable { mapState.zoomOut() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("-", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("-", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
                 }
             }
         }
 
         // Recenter on Krakow Center
-        Surface(
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.95f),
-            shadowElevation = 4.dp,
-            modifier = Modifier.size(44.dp)
-        ) {
-            IconButton(
-                onClick = { mapState.resetToKrakow() },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text("🎯", fontSize = 18.sp)
-            }
-        }
+        RoundToolButton(icon = "🎯", active = false) { mapState.resetToKrakow() }
 
         // Layer Manager toggle
-        Surface(
-            shape = CircleShape,
-            color = if (mapState.isLayerManagerOpen) Color(0xFF2563EB) else Color.White.copy(alpha = 0.95f),
-            shadowElevation = 4.dp,
-            modifier = Modifier.size(44.dp)
-        ) {
-            IconButton(
-                onClick = { mapState.isLayerManagerOpen = !mapState.isLayerManagerOpen },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text("🥞", fontSize = 18.sp)
-            }
+        RoundToolButton(icon = "🥞", active = mapState.isLayerManagerOpen) {
+            mapState.isLayerManagerOpen = !mapState.isLayerManagerOpen
         }
 
         // Tile Source selector toggle
-        Surface(
-            shape = CircleShape,
-            color = if (mapState.isTileSelectorOpen) Color(0xFF2563EB) else Color.White.copy(alpha = 0.95f),
-            shadowElevation = 4.dp,
-            modifier = Modifier.size(44.dp)
-        ) {
-            IconButton(
-                onClick = { mapState.isTileSelectorOpen = !mapState.isTileSelectorOpen },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text("🗺️", fontSize = 18.sp)
-            }
+        RoundToolButton(icon = "🗺️", active = mapState.isTileSelectorOpen) {
+            mapState.isTileSelectorOpen = !mapState.isTileSelectorOpen
         }
 
         // Debug & Render inspector toggle
-        Surface(
-            shape = CircleShape,
-            color = if (mapState.isDebugStatsOpen) Color(0xFF10B981) else Color.White.copy(alpha = 0.95f),
-            shadowElevation = 4.dp,
-            modifier = Modifier.size(44.dp)
+        RoundToolButton(
+            icon = "⚙️",
+            active = mapState.isDebugStatsOpen,
+            activeColor = AppColors.Success
         ) {
-            IconButton(
-                onClick = { mapState.isDebugStatsOpen = !mapState.isDebugStatsOpen },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text("⚙️", fontSize = 18.sp)
-            }
+            mapState.isDebugStatsOpen = !mapState.isDebugStatsOpen
+        }
+    }
+}
+
+@Composable
+private fun RoundToolButton(
+    icon: String,
+    active: Boolean,
+    activeColor: Color = AppColors.Accent,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = CircleShape,
+        color = if (active) activeColor else AppColors.Surface,
+        border = if (active) BorderStroke(1.dp, activeColor) else AppBorder,
+        shadowElevation = 4.dp,
+        modifier = Modifier.size(44.dp)
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Text(icon, fontSize = 18.sp)
         }
     }
 }

@@ -6,12 +6,12 @@ enum class PlaceCategory(
     val title: String,
     val color: Color
 ) {
-    CASTLE("Castle & Royal", Color(0xFF7C3AED)),      // Purple
-    MONUMENT("Historic Landmark", Color(0xFFD97706)),// Amber
-    CHURCH("Historic Church", Color(0xFFDC2626)),     // Red
-    CULTURE("Museum & Culture", Color(0xFF2563EB)),   // Blue
-    SQUARE("Public Square", Color(0xFF0D9488)),       // Teal
-    PARK("Park & Nature", Color(0xFF16A34A)),         // Green
-    MOUND("Historic Mound", Color(0xFF059669)),       // Emerald
-    TRANSPORT("Transport Hub", Color(0xFF475569))     // Slate
+    CASTLE("Castle & Royal", Color(0xFF8B5CF6)),      // Violet
+    MONUMENT("Historic Landmark", Color(0xFFF59E0B)),// Amber
+    CHURCH("Historic Church", Color(0xFFEF4444)),     // Red
+    CULTURE("Museum & Culture", Color(0xFF3B82F6)),   // Blue
+    SQUARE("Public Square", Color(0xFF14B8A6)),       // Teal
+    PARK("Park & Nature", Color(0xFF22C55E)),         // Green
+    MOUND("Historic Mound", Color(0xFF10B981)),       // Emerald
+    TRANSPORT("Transport Hub", Color(0xFF94A3B8))     // Slate
 }

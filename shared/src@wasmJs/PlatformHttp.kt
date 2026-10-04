@@ -40,7 +40,10 @@ private external fun byteAt(a: JsAny, i: Int): Int
 // Firefox sends a custom User-Agent, which turns tile/search requests into CORS preflights that
 // tile servers reject; the browser's own User-Agent is used instead.
 private fun headersJson(headers: Map<String, String>): String =
-    headers.entries.filterNot { it.key.equals("User-Agent", ignoreCase = true) }
+    headers.entries.filterNot {
+        it.key.equals("User-Agent", ignoreCase = true) ||
+            it.key.equals("Referer", ignoreCase = true)
+    }
         .joinToString(prefix = "{", postfix = "}", separator = ",") { (k, v) ->
         "${quote(k)}:${quote(v)}"
     }
