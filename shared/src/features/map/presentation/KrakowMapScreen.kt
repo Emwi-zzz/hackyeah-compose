@@ -3,18 +3,19 @@ package features.map.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
+import core.ui.AppTheme
 import features.admin.domain.AdminState
 import features.admin.layers.AdminDraftLayer
 import features.admin.presentation.AdminPanel
@@ -100,11 +101,11 @@ fun KrakowMapScreen() {
         }
     }
 
-    MaterialTheme {
+    AppTheme {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFE2E8F0))
+                .background(AppColors.Background)
         ) {
             // Base Layer: Map Canvas & Gesture Engine
             MapCanvas(
@@ -158,9 +159,9 @@ fun KrakowMapScreen() {
                         )
                     } else {
                         Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color(0xFF2563EB),
-                            shadowElevation = 4.dp,
+                            shape = AppShapes.Pill,
+                            color = AppColors.Accent,
+                            shadowElevation = 6.dp,
                             modifier = Modifier
                                 .padding(top = 4.dp)
                                 .clickable {
@@ -175,7 +176,7 @@ fun KrakowMapScreen() {
                                 Text("🧭", fontSize = 13.sp)
                                 Text(
                                     "Indoor Directions & Route",
-                                    color = Color.White,
+                                    color = AppColors.OnAccent,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -309,10 +310,10 @@ fun KrakowMapScreen() {
                 }
                 AdminToggleButton(admin = adminState)
                 mapState.locationError?.let { error ->
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFFEF2F2), shadowElevation = 2.dp) {
+                    Surface(shape = AppShapes.Control, color = AppColors.Surface, border = AppBorder) {
                         Text(
                             error,
-                            color = Color(0xFFDC2626),
+                            color = AppColors.Danger,
                             fontSize = 11.sp,
                             modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = 10.dp, vertical = 6.dp)
                         )
@@ -345,16 +346,17 @@ fun KrakowMapScreen() {
 @Composable
 private fun MapPill(text: String, active: Boolean, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (active) Color(0xFF2563EB) else Color.White,
+        shape = AppShapes.Pill,
+        color = if (active) AppColors.Accent else AppColors.Surface,
+        border = if (active) null else AppBorder,
         shadowElevation = 4.dp,
         modifier = Modifier.clickable { onClick() }
     ) {
         Text(
             text = text,
-            color = if (active) Color.White else Color(0xFF0F172A),
+            color = if (active) AppColors.OnAccent else AppColors.TextPrimary,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
         )
     }

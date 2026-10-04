@@ -1,6 +1,7 @@
 package features.indoor.presentation
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,17 +9,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.indoor.domain.NavLocation
 import features.indoor.domain.NavLocationType
 import features.map.presentation.MapState
@@ -44,10 +46,10 @@ fun IndoorRouteSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White.copy(alpha = 0.98f),
-        shadowElevation = 8.dp,
-        tonalElevation = 2.dp
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        shadowElevation = 4.dp,
+        border = AppBorder
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -67,7 +69,7 @@ fun IndoorRouteSearchBar(
                     Box(
                         modifier = Modifier
                             .size(28.dp)
-                            .background(Color(0xFF2563EB), CircleShape),
+                            .background(AppColors.AccentSoft, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("🧭", fontSize = 14.sp)
@@ -76,8 +78,8 @@ fun IndoorRouteSearchBar(
                         Text(
                             text = "Indoor Navigation • ${mall.name}",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextPrimary
                         )
                         if (approach != null) {
                             val inside = approach.indoor?.totalDistanceMeters?.toInt()
@@ -87,7 +89,7 @@ fun IndoorRouteSearchBar(
                                     " • ~${approach.estimatedTimeSeconds / 60 + 1} min" +
                                     if (mapState.isAccessibleRouting) " • ♿" else "",
                                 fontSize = 11.sp,
-                                color = Color(0xFF059669),
+                                color = AppColors.Success,
                                 fontWeight = FontWeight.SemiBold
                             )
                         } else if (activeRoute != null) {
@@ -95,21 +97,21 @@ fun IndoorRouteSearchBar(
                                 text = "${activeRoute.totalDistanceMeters.toInt()} m • ~${activeRoute.estimatedTimeSeconds / 60 + 1} min • ${activeRoute.levels.size} floor${if (activeRoute.levels.size > 1) "s" else ""}" +
                                     if (mapState.isAccessibleRouting) " • ♿" else "",
                                 fontSize = 11.sp,
-                                color = Color(0xFF059669),
+                                color = AppColors.Success,
                                 fontWeight = FontWeight.SemiBold
                             )
                         } else if (mapState.indoorRouteError != null) {
                             Text(
                                 text = mapState.indoorRouteError!!,
                                 fontSize = 10.sp,
-                                color = Color(0xFFDC2626),
+                                color = AppColors.Danger,
                                 fontWeight = FontWeight.SemiBold
                             )
                         } else {
                             Text(
                                 text = "Select start (exit/shop) and destination",
                                 fontSize = 10.sp,
-                                color = Color(0xFF64748B)
+                                color = AppColors.TextMuted
                             )
                         }
                     }
@@ -123,14 +125,14 @@ fun IndoorRouteSearchBar(
                         },
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Text("✕", fontSize = 14.sp, color = Color(0xFF64748B))
+                        Text("✕", fontSize = 14.sp, color = AppColors.TextMuted)
                     }
                     if (hasRoute) {
                         IconButton(
                             onClick = { isExpanded = !isExpanded },
                             modifier = Modifier.size(32.dp)
                         ) {
-                            Text(if (isExpanded) "▲" else "▼", fontSize = 12.sp, color = Color(0xFF334155))
+                            Text(if (isExpanded) "▲" else "▼", fontSize = 12.sp, color = AppColors.TextSecondary)
                         }
                     }
                 }
@@ -180,7 +182,9 @@ fun IndoorRouteSearchBar(
                     ) {
                         OutlinedButton(
                             onClick = { mapState.swapIndoorRouteEndpoints() },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = AppShapes.Control,
+                            border = AppBorder,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.TextPrimary),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(38.dp)
                         ) {
@@ -199,8 +203,11 @@ fun IndoorRouteSearchBar(
                             enabled = mapState.indoorRouteStartLocation != null &&
                                     mapState.indoorRouteEndLocation != null &&
                                     !mapState.isIndoorRouteLoading,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            shape = AppShapes.Control,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.Accent,
+                                contentColor = AppColors.OnAccent
+                            ),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(38.dp)
@@ -208,13 +215,13 @@ fun IndoorRouteSearchBar(
                             if (mapState.isIndoorRouteLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = Color.White,
+                                    color = AppColors.OnAccent,
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text("Calculating...", fontSize = 12.sp)
                             } else {
-                                Text("Find Bézier Route ➔", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Find Bézier Route ➔", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -225,8 +232,9 @@ fun IndoorRouteSearchBar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 240.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                            shape = RoundedCornerShape(12.dp)
+                            colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceRaised),
+                            shape = AppShapes.Control,
+                            border = AppBorder
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 OutlinedTextField(
@@ -268,7 +276,7 @@ fun IndoorRouteSearchBar(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(6.dp))
+                                                .clip(AppShapes.Control)
                                                 .clickable {
                                                     if (isSelectingStart) {
                                                         mapState.indoorRouteStartLocation = loc
@@ -311,19 +319,20 @@ fun IndoorRouteSearchBar(
                                                         overflow = TextOverflow.Ellipsis
                                                     )
                                                     loc.category?.let {
-                                                        Text(it, fontSize = 10.sp, color = Color(0xFF64748B))
+                                                        Text(it, fontSize = 10.sp, color = AppColors.TextMuted)
                                                     }
                                                 }
                                             }
 
                                             Surface(
-                                                color = Color(0xFFE2E8F0),
-                                                shape = RoundedCornerShape(4.dp)
+                                                color = AppColors.SurfaceHover,
+                                                shape = AppShapes.Pill
                                             ) {
                                                 Text(
                                                     floorText(loc),
                                                     fontSize = 9.sp,
-                                                    fontWeight = FontWeight.Bold,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = AppColors.TextSecondary,
                                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                                 )
                                             }
@@ -341,8 +350,9 @@ fun IndoorRouteSearchBar(
             if (approach != null && !isExpanded) {
                 val remaining = (approach.outdoor.distanceMeters - (progress?.alongMeters ?: 0.0)).coerceAtLeast(0.0)
                 Surface(
-                    color = Color(0xFFF0FDF4),
-                    shape = RoundedCornerShape(8.dp),
+                    color = AppColors.SuccessSoft,
+                    shape = AppShapes.Control,
+                    border = BorderStroke(1.dp, AppColors.Success.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
@@ -351,19 +361,22 @@ fun IndoorRouteSearchBar(
                             else "Outdoor: ${remaining.toInt()} m left" +
                                 if (mapState.rerouteCount > 0) " • re-routed ${mapState.rerouteCount}×" else "",
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF15803D)
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.Success
                         )
                         approach.outdoor.instructions.take(4).forEach {
-                            Text(it, fontSize = 11.sp, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(it, fontSize = 11.sp, color = AppColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         if (approach.outdoor.instructions.size > 4) {
-                            Text("…", fontSize = 11.sp, color = Color(0xFF64748B))
+                            Text("…", fontSize = 11.sp, color = AppColors.TextMuted)
                         }
                         // Test tools: fake GPS movement along the route, and a jump off it to force a re-route
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
                             OutlinedButton(
                                 onClick = { mapState.toggleWalkSimulation() },
+                                shape = AppShapes.Pill,
+                                border = BorderStroke(1.dp, AppColors.Success.copy(alpha = 0.4f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Success),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
@@ -372,6 +385,9 @@ fun IndoorRouteSearchBar(
                             OutlinedButton(
                                 onClick = { mapState.simulateWrongTurn() },
                                 enabled = remaining >= 15,
+                                shape = AppShapes.Pill,
+                                border = BorderStroke(1.dp, AppColors.Success.copy(alpha = 0.4f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Success),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
@@ -387,8 +403,8 @@ fun IndoorRouteSearchBar(
                 val curFloorRoute = activeRoute.levels.find { it.floorNumber == mapState.currentFloorNumber }
                 if (curFloorRoute != null) {
                     Surface(
-                        color = Color(0xFFEFF6FF),
-                        shape = RoundedCornerShape(8.dp),
+                        color = AppColors.AccentSoft,
+                        shape = AppShapes.Control,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -400,13 +416,13 @@ fun IndoorRouteSearchBar(
                                 Text(
                                     "Level ${if (curFloorRoute.floorNumber >= 0) "+${curFloorRoute.floorNumber}" else "${curFloorRoute.floorNumber}"} Route:",
                                     fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1D4ED8)
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AppColors.Accent
                                 )
                                 Text(
                                     curFloorRoute.instructions.firstOrNull() ?: "Follow blue Bézier path",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF1E293B),
+                                    color = AppColors.TextPrimary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -421,7 +437,7 @@ fun IndoorRouteSearchBar(
                                         onClick = { mapState.selectFloor(nextLevel.floorNumber) },
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                     ) {
-                                        Text("Next Floor ➔", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text("Next Floor ➔", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Accent)
                                     }
                                 }
                             }
@@ -448,11 +464,11 @@ private fun LocationPickerField(
     onClear: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFFF8FAFC),
+        shape = AppShapes.Control,
+        color = AppColors.SurfaceRaised,
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+            .border(1.dp, AppColors.Border, AppShapes.Control)
             .clickable { onClick() }
     ) {
         Row(
@@ -472,21 +488,21 @@ private fun LocationPickerField(
                             text = selectedLocation.name,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF0F172A),
+                            color = AppColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = floorText(selectedLocation),
                             fontSize = 10.sp,
-                            color = Color(0xFF64748B)
+                            color = AppColors.TextMuted
                         )
                     }
                 } else {
                     Text(
                         text = label,
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = AppColors.TextMuted
                     )
                 }
             }
@@ -496,7 +512,7 @@ private fun LocationPickerField(
                     onClick = onClear,
                     modifier = Modifier.size(20.dp)
                 ) {
-                    Text("✕", fontSize = 10.sp, color = Color(0xFF64748B))
+                    Text("✕", fontSize = 10.sp, color = AppColors.TextMuted)
                 }
             }
         }

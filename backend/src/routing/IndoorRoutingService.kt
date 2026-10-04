@@ -330,15 +330,31 @@ class IndoorRoutingService {
             val t = (cuts[i] + cuts[i + 1]) / 2.0
             val midpoint = Point(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
             if (!walkable(plan, midpoint, a, b)) return false
+            if (onWall(plan, midpoint) && !hasWalkableSide(plan, midpoint, a, b)) return false
         }
         return true
+    }
+
+    private fun onWall(plan: FloorPlan, point: Point) =
+        plan.walls.any { wall -> wall.bounds.contains(point) && distanceToSegment(point, wall.start, wall.end) < EPSILON }
+
+    // A wall shared by two blocked areas (shop|shop, shop|void, shop|outer wall) has no room to walk along it
+    private fun hasWalkableSide(plan: FloorPlan, point: Point, a: Point, b: Point): Boolean {
+        val length = distance(a, b)
+        val normalX = -(b.y - a.y) / length * SIDE_PROBE
+        val normalY = (b.x - a.x) / length * SIDE_PROBE
+        return walkable(plan, Point(point.x + normalX, point.y + normalY), a, b) ||
+            walkable(plan, Point(point.x - normalX, point.y - normalY), a, b)
     }
 
     private fun walkable(plan: FloorPlan, point: Point, a: Point, b: Point): Boolean {
         if (!plan.outline.contains(point) && !plan.outline.onBoundary(point)) return false
         if (plan.voids.any { it.strictlyContains(point) }) return false
-        val shop = plan.shops.firstOrNull { it.polygon.strictlyContains(point) } ?: return true
-        return insideOrDoor(shop, a) && insideOrDoor(shop, b)
+        // Boundary counts as the shop, so a shared wall or two doors on a run of fronts
+        // cannot be used as a corridor. Only travel that stays in one shop (door to door) is allowed.
+        val covering = plan.shops.filter { it.polygon.onBoundary(point) || it.polygon.strictlyContains(point) }
+        if (covering.isEmpty()) return true
+        return covering.all { insideOrDoor(it, a) && insideOrDoor(it, b) }
     }
 
     private fun insideOrDoor(shop: ShopArea, point: Point) =
@@ -366,6 +382,7 @@ class IndoorRoutingService {
     private companion object {
         const val EPSILON = 1e-6
         const val CURVE_STEPS = 8
+        const val SIDE_PROBE = 1e-3
         const val ELEVATOR_COST = 60.0
         const val ESCALATOR_COST = 40.0
         val MIN_RIDE_COST = minOf(ELEVATOR_COST, ESCALATOR_COST)

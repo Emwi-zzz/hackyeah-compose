@@ -3,32 +3,22 @@ package features.map.data
 import features.map.domain.TileSource
 
 object OpenTileSources {
+    val STADIA_DARK = TileSource(
+        id = "stadia_dark",
+        name = "Dark streets",
+        description = "Dark city map with streets down to building scale",
+        attribution = "© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors",
+        urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png",
+        minZoom = 0,
+        maxZoom = 20
+    )
+
     val OSM_STANDARD = TileSource(
         id = "osm_standard",
         name = "OpenStreetMap",
         description = "Standard crowd-sourced map of Krakow and world",
         attribution = "© OpenStreetMap contributors (ODbL)",
         urlTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        minZoom = 0,
-        maxZoom = 19
-    )
-
-    val CARTO_VOYAGER = TileSource(
-        id = "carto_voyager",
-        name = "Carto Voyager",
-        description = "Vibrant, high-contrast city map with highlighted landmarks",
-        attribution = "© OpenStreetMap contributors, © CARTO",
-        urlTemplate = "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-        minZoom = 0,
-        maxZoom = 19
-    )
-
-    val CARTO_POSITRON = TileSource(
-        id = "carto_positron",
-        name = "Carto Positron",
-        description = "Clean minimalist light map, ideal for custom overlays and data renders",
-        attribution = "© OpenStreetMap contributors, © CARTO",
-        urlTemplate = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         minZoom = 0,
         maxZoom = 19
     )
@@ -44,11 +34,10 @@ object OpenTileSources {
     )
 
     val ALL: List<TileSource> = listOf(
+        STADIA_DARK,
         OSM_STANDARD,
-        CARTO_VOYAGER,
-        CARTO_POSITRON,
         OPEN_TOPO
     )
 
-    val DEFAULT: TileSource = OSM_STANDARD
+    val DEFAULT: TileSource = STADIA_DARK
 }

@@ -1,6 +1,5 @@
 package features.rendering.presentation
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,10 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 import kotlin.math.roundToInt
 
@@ -29,10 +30,12 @@ fun LayerManagerSheet(
         modifier = modifier
             .width(360.dp)
             .heightIn(max = 520.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        color = Color.White.copy(alpha = 0.98f),
-        shadowElevation = 8.dp,
-        tonalElevation = 3.dp
+            .clip(AppShapes.Card),
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        contentColor = AppColors.TextPrimary,
+        border = AppBorder,
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -45,26 +48,26 @@ fun LayerManagerSheet(
                 Column {
                     Text(
                         text = "Layer & Render Pipeline",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
-                        color = Color(0xFF0F172A)
+                        color = AppColors.TextPrimary
                     )
                     Text(
                         text = "Extensible Clean Architecture render stack",
                         fontSize = 11.sp,
-                        color = Color(0xFF64748B)
+                        color = AppColors.TextMuted
                     )
                 }
                 IconButton(
                     onClick = { mapState.isLayerManagerOpen = false },
                     modifier = Modifier.size(24.dp)
                 ) {
-                    Text("✕", fontSize = 14.sp, color = Color.Gray)
+                    Text("✕", fontSize = 14.sp, color = AppColors.TextSecondary)
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(color = AppColors.Border)
             Spacer(modifier = Modifier.height(8.dp))
 
             LazyColumn(
@@ -79,11 +82,10 @@ fun LayerManagerSheet(
                 ) { layer ->
                     check(revision >= 0)
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (layer.isVisible) Color(0xFFF8FAFC) else Color(0xFFF1F5F9),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+                        shape = AppShapes.Control,
+                        color = if (layer.isVisible) AppColors.SurfaceRaised else AppColors.SurfaceRaised.copy(alpha = 0.5f),
+                        border = AppBorder,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier.padding(10.dp)
@@ -98,14 +100,14 @@ fun LayerManagerSheet(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = Color(0xFF3B82F6).copy(alpha = 0.15f)
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = AppColors.AccentSoft
                                     ) {
                                         Text(
                                             text = "z:${layer.zIndex}",
                                             fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF2563EB),
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = AppColors.Accent,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                         )
                                     }
@@ -113,7 +115,7 @@ fun LayerManagerSheet(
                                         text = layer.name,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 13.sp,
-                                        color = if (layer.isVisible) Color(0xFF1E293B) else Color(0xFF94A3B8)
+                                        color = if (layer.isVisible) AppColors.TextPrimary else AppColors.TextMuted
                                     )
                                 }
 
@@ -127,7 +129,7 @@ fun LayerManagerSheet(
                             Text(
                                 text = layer.description,
                                 fontSize = 10.sp,
-                                color = Color(0xFF64748B),
+                                color = AppColors.TextMuted,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
 
@@ -140,7 +142,7 @@ fun LayerManagerSheet(
                                     Text(
                                         text = "Opacity:",
                                         fontSize = 10.sp,
-                                        color = Color(0xFF475569)
+                                        color = AppColors.TextSecondary
                                     )
                                     Slider(
                                         value = layer.opacity,
@@ -154,7 +156,7 @@ fun LayerManagerSheet(
                                         text = "${(layer.opacity * 100).roundToInt()}%",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF475569),
+                                        color = AppColors.TextSecondary,
                                         modifier = Modifier.width(32.dp)
                                     )
                                 }
@@ -166,14 +168,14 @@ fun LayerManagerSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFF0FDF4),
+                shape = AppShapes.Control,
+                color = AppColors.SuccessSoft,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "💡 Tip: Plug any custom MapLayer into layerRegistry.registerLayer()",
                     fontSize = 10.sp,
-                    color = Color(0xFF166534),
+                    color = AppColors.Success,
                     modifier = Modifier.padding(8.dp)
                 )
             }

@@ -9,17 +9,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import sklepsearch.Floor
 import sklepsearch.Mall
 
@@ -39,10 +41,10 @@ fun FloorSelectorControl(
         modifier = modifier
     ) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xF20F172A),
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+            shape = AppShapes.Card,
+            color = AppColors.Surface,
+            shadowElevation = 4.dp,
+            border = AppBorder
         ) {
             Column(
                 modifier = Modifier.padding(10.dp),
@@ -55,14 +57,14 @@ fun FloorSelectorControl(
                     Text(
                         text = mall.name,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary
                     )
                     Text(
                         text = "FLOORS",
                         fontSize = 8.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF94A3B8)
+                        color = AppColors.TextMuted
                     )
                 }
 
@@ -70,7 +72,7 @@ fun FloorSelectorControl(
                     modifier = Modifier
                         .width(44.dp)
                         .height(1.dp)
-                        .background(Color(0xFF334155))
+                        .background(AppColors.Border)
                 )
 
                 // Floor Buttons (sorted descending: e.g. +2, +1, 0, -1)
@@ -94,16 +96,16 @@ fun FloorSelectorControl(
 
                     val hasRoute = floor.number in routeFloors
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) Color(0xFF2563EB) else if (hasRoute) Color(0xFF1E3A8A) else Color(0xFF1E293B),
+                        shape = AppShapes.Control,
+                        color = if (isSelected) AppColors.Accent else if (hasRoute) AppColors.AccentSoft else AppColors.SurfaceRaised,
                         modifier = Modifier
                             .width(52.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppShapes.Control)
                             .clickable { onSelectFloor(floor.number) }
                             .border(
-                                width = if (isSelected) 1.5.dp else if (hasRoute) 1.dp else 0.5.dp,
-                                color = if (isSelected) Color(0xFF60A5FA) else if (hasRoute) Color(0xFF38BDF8) else Color(0xFF475569),
-                                shape = RoundedCornerShape(10.dp)
+                                width = 1.dp,
+                                color = if (isSelected) AppColors.Accent else if (hasRoute) AppColors.Accent else AppColors.Border,
+                                shape = AppShapes.Control
                             )
                     ) {
                         Column(
@@ -114,22 +116,22 @@ fun FloorSelectorControl(
                                 Text(
                                     text = floorLabel,
                                     fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSelected) AppColors.OnAccent else AppColors.TextPrimary
                                 )
                                 if (hasRoute) {
                                     Spacer(Modifier.width(3.dp))
                                     Box(
                                         modifier = Modifier
                                             .size(6.dp)
-                                            .background(Color(0xFF38BDF8), androidx.compose.foundation.shape.CircleShape)
+                                            .background(if (isSelected) AppColors.OnAccent else AppColors.Accent, CircleShape)
                                     )
                                 }
                             }
                             Text(
                                 text = if (hasRoute && !isSelected) "Route" else subtitle,
                                 fontSize = 8.sp,
-                                color = if (isSelected) Color(0xFFDBEAFE) else if (hasRoute) Color(0xFF7DD3FC) else Color(0xFF94A3B8)
+                                color = if (isSelected) AppColors.OnAccent.copy(alpha = 0.8f) else if (hasRoute) AppColors.Accent else AppColors.TextMuted
                             )
                         }
                     }

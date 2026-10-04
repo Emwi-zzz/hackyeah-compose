@@ -25,7 +25,7 @@ object KrakowVectorPresets {
             GeoPoint(50.0550, 20.0200), // Łęg / Nowa Huta
             GeoPoint(50.0480, 20.0600)  // East Krakow bend
         ),
-        color = Color(0xFF2563EB), // Rich blue
+        color = Color(0xFF3B82F6), // Bright blue
         strokeWidthDp = 7f,
         isDashed = false
     )
@@ -47,7 +47,7 @@ object KrakowVectorPresets {
             GeoPoint(50.0555, 19.9380), // Podzamcze
             GeoPoint(50.0570, 19.9330)  // Closing loop
         ),
-        color = Color(0xFF16A34A), // Rich park green
+        color = Color(0xFF22C55E), // Bright park green
         strokeWidthDp = 5f,
         isDashed = false
     )
@@ -65,7 +65,7 @@ object KrakowVectorPresets {
             GeoPoint(50.0610, 19.9360)  // SW corner (Wiślna / Bracka)
         ),
         fillColor = Color(0x33F59E0B), // Warm amber translucent
-        strokeColor = Color(0xFFD97706),
+        strokeColor = Color(0xFFFBBF24),
         strokeWidthDp = 2f
     )
 
@@ -88,7 +88,7 @@ object KrakowVectorPresets {
             GeoPoint(50.0900, 19.8200), // West (Mydlniki)
             GeoPoint(50.1250, 19.8600)  // Close loop
         ),
-        color = Color(0xFFDC2626), // Red dashed
+        color = Color(0xFFF87171), // Red dashed
         strokeWidthDp = 2f,
         isDashed = true
     )

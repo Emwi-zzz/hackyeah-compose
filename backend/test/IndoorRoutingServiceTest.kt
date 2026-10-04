@@ -106,6 +106,65 @@ class IndoorRoutingServiceTest {
         }
     }
 
+    @Test
+    fun routeDoesNotSqueezeBetweenShopsSharingAWall() {
+        fun shop(id: Long, area: Path2D) = Store(
+            Instanceid = id, Shopid = id, name = "Shop $id", area = area, entryPoints = emptyList()
+        )
+        val mall = Mall(
+            id = 98,
+            name = "Touching shops",
+            size = Size(100, 100),
+            upperLeft = GeoPoint(19.0, 50.0),
+            downRight = GeoPoint(19.001, 49.999),
+            minFloor = 0,
+            entryPoints = emptyList(),
+            floors = listOf(
+                Floor(
+                    number = 0,
+                    box = Path2D.rectangle(0.0, 0.0, 100.0, 100.0),
+                    stores = listOf(
+                        shop(1, Path2D.rectangle(30.0, 25.0, 20.0, 15.0)),
+                        shop(2, Path2D.rectangle(30.0, 40.0, 20.0, 35.0))
+                    ),
+                    elevators = emptyList(),
+                    escalators = emptyList()
+                )
+            )
+        )
+        val start = NavLocationDto("start", "Start", "STORE", 0, PointDto(10.0, 40.0))
+        val end = NavLocationDto("end", "End", "STORE", 0, PointDto(90.0, 40.0))
+
+        val waypoints = service.calculateRoute(mall, start, end).getOrThrow().levels.single().waypoints
+
+        assertTrue(waypoints.size > 2, "Route walked along the shared wall: $waypoints")
+        assertTrue(waypoints.any { it.y <= 25.0 + 1e-6 || it.y >= 75.0 - 1e-6 }, "Route must go around both shops")
+    }
+
+    @Test
+    fun adjacentKrakowskaFoodStandsAreNotAShortcut() {
+        val locations = service.navLocations(krakowska)
+        val pierogi = locations.first { it.id == "store_20156" } // Pierogi Republic, shop 505
+        val churros = locations.first { it.id == "store_20155" } // Churros Calle, shop 602
+        val waypoints = service.calculateRoute(krakowska, pierogi, churros).getOrThrow()
+            .levels.single { it.floorNumber == 1 }.waypoints
+
+        waypoints.zipWithNext().forEach { (a, b) ->
+            for (step in 1..9) {
+                val t = step / 10.0
+                val x = a.x + (b.x - a.x) * t
+                val y = a.y + (b.y - a.y) * t
+                val insideBlock = x > 42.05 && x < 61.95 && y > 196.05 && y < 203.95
+                val onSharedWall = kotlin.math.abs(x - 52.0) < 0.05 && y in 196.0..204.0
+                assertTrue(!insideBlock && !onSharedWall, "Path cuts through 505/602 at $x,$y: $waypoints")
+            }
+        }
+        assertTrue(
+            waypoints.any { it.y > 204.2 || it.y < 195.8 },
+            "Path stayed on the shared shop front: $waypoints"
+        )
+    }
+
     private fun strictlyInside(path: Path2D, point: Point): Boolean {
         if (!path.contains(point)) return false
         val vertices = path.getVertices()

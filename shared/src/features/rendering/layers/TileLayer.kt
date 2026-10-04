@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import core.geometry.WebMercatorProjection
+import features.map.domain.TileCoordinate
+import features.map.domain.TileSource
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
 import kotlin.math.pow
@@ -13,7 +15,7 @@ import kotlin.math.roundToInt
 class TileLayer(
     override val id: String = "base_tile_layer",
     override val name: String = "Base Map Tiles",
-    override val description: String = "Dynamic OpenStreetMap / Carto raster basemap",
+    override val description: String = "Dynamic OpenStreetMap / Stadia raster basemap",
     override var isVisible: Boolean = true,
     override var opacity: Float = 1.0f,
     override val zIndex: Int = 0
@@ -21,10 +23,13 @@ class TileLayer(
 
     override fun render(context: RenderContext) {
         val viewport = context.viewport
-        val z = viewport.integerZoom
+        val source = context.activeTileSource
+        // Past the source's last zoom, keep requesting that zoom and scale the tiles up
+        val z = viewport.integerZoom.coerceIn(source.minZoom, source.maxZoom)
         val tiles = viewport.visibleTileCoordinates(z)
         val numTiles = 1 shl z
         val scale = WebMercatorProjection.worldPixelSize(viewport.zoom)
+        val filter = if (viewport.integerZoom > source.maxZoom) FilterQuality.Medium else FilterQuality.Low
 
         val centerWorldX = WebMercatorProjection.toWorldX(viewport.center.longitude)
         val centerWorldY = WebMercatorProjection.toWorldY(viewport.center.latitude)
@@ -42,7 +47,7 @@ class TileLayer(
             // Add 1px overlap to prevent subpixel rounding gaps
             val dstSize = IntSize((tileScreenSize + 1f).roundToInt(), (tileScreenSize + 1f).roundToInt())
 
-            val cachedBitmap = context.tileRepository.getTileFromCache(tile, context.activeTileSource)
+            val cachedBitmap = context.tileRepository.getTileFromCache(tile, source)
 
             if (cachedBitmap != null) {
                 context.drawScope.drawImage(
@@ -50,34 +55,46 @@ class TileLayer(
                     dstOffset = dstOffset,
                     dstSize = dstSize,
                     alpha = opacity,
-                    filterQuality = FilterQuality.Low
+                    filterQuality = filter
                 )
             } else {
-                // Request tile loading in background
-                context.tileRepository.prefetchTiles(listOf(tile), context.activeTileSource)
-
-                // Progressive fallback: draw parent tile from zoom - 1 if available
-                val parent = tile.parent
-                if (parent != null) {
-                    val parentBitmap = context.tileRepository.getTileFromCache(parent, context.activeTileSource)
-                    if (parentBitmap != null) {
-                        val subX = (tile.x % 2) * (parentBitmap.width / 2)
-                        val subY = (tile.y % 2) * (parentBitmap.height / 2)
-                        val subW = parentBitmap.width / 2
-                        val subH = parentBitmap.height / 2
-
-                        context.drawScope.drawImage(
-                            image = parentBitmap,
-                            srcOffset = IntOffset(subX, subY),
-                            srcSize = IntSize(subW, subH),
-                            dstOffset = dstOffset,
-                            dstSize = dstSize,
-                            alpha = opacity * 0.85f,
-                            filterQuality = FilterQuality.Low
-                        )
-                    }
-                }
+                context.tileRepository.prefetchTiles(listOf(tile), source)
+                drawAncestor(context, tile, source, dstOffset, dstSize, filter)
             }
+        }
+    }
+
+    private fun drawAncestor(
+        context: RenderContext,
+        tile: TileCoordinate,
+        source: TileSource,
+        dstOffset: IntOffset,
+        dstSize: IntSize,
+        filter: FilterQuality
+    ) {
+        var ancestor = tile.parent
+        while (ancestor != null) {
+            val bitmap = context.tileRepository.getTileFromCache(ancestor, source)
+            if (bitmap != null) {
+                val shift = tile.zoom - ancestor.zoom
+                val factor = 1 shl shift
+                val subW = bitmap.width / factor
+                val subH = bitmap.height / factor
+                if (subW < 1 || subH < 1) return
+                val localX = tile.x - (ancestor.x shl shift)
+                val localY = tile.y - (ancestor.y shl shift)
+                context.drawScope.drawImage(
+                    image = bitmap,
+                    srcOffset = IntOffset(localX * subW, localY * subH),
+                    srcSize = IntSize(subW, subH),
+                    dstOffset = dstOffset,
+                    dstSize = dstSize,
+                    alpha = opacity * 0.85f,
+                    filterQuality = filter
+                )
+                return
+            }
+            ancestor = ancestor.parent
         }
     }
 }
