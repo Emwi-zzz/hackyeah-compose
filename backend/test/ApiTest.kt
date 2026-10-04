@@ -48,6 +48,11 @@ class ApiTest {
         val route: RouteDto = client.get(ApiPaths.route(1, from.id, to.id)).body()
         assertEquals(from.id, route.start.id)
         assertEquals(to.floorNumber, route.levels.last().floorNumber)
+
+        val accessible: RouteDto = client.get(ApiPaths.route(1, from.id, to.id, accessibleOnly = true)).body()
+        val instructions = accessible.levels.flatMap { it.instructions }
+        assertEquals(to.floorNumber, accessible.levels.last().floorNumber)
+        assertTrue(instructions.none { "escalator" in it }, "Accessible route must not use escalators: $instructions")
     }
 
     @Test

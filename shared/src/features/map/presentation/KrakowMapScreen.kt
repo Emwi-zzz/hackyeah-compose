@@ -256,6 +256,26 @@ fun KrakowMapScreen() {
                 )
             }
 
+            // Top-Left: step-free routing toggle (always visible)
+            val accessible = mapState.isAccessibleRouting
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = if (accessible) Color(0xFF2563EB) else Color.White,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 12.dp, start = 16.dp)
+                    .clickable { mapState.toggleAccessibleRouting() }
+            ) {
+                Text(
+                    text = if (accessible) "♿ Accessible: ON" else "♿ Accessible: OFF",
+                    color = if (accessible) Color.White else Color(0xFF0F172A),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
+
             // Overlays: Admin panel
             AdminToggleButton(
                 admin = adminState,

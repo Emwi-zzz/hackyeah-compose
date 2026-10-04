@@ -67,6 +67,7 @@ class MapState(
     var indoorRouteStartLocation by mutableStateOf<NavLocation?>(null)
     var indoorRouteEndLocation by mutableStateOf<NavLocation?>(null)
     var isIndoorNavigationOpen by mutableStateOf(false)
+    var isAccessibleRouting by mutableStateOf(false)
 
     val renderPipeline = RenderPipeline(layersSupplier = { layerRegistry.layers })
 
@@ -213,15 +214,24 @@ class MapState(
         isIndoorRouteLoading = true
         indoorRouteError = null
         scope.launch {
-            val result = indoorRoutingRepository.calculateRoute(mall.id, start, end)
+            val result = indoorRoutingRepository.calculateRoute(mall.id, start, end, isAccessibleRouting)
             isIndoorRouteLoading = false
             result.onSuccess { route ->
                 activeIndoorRoute = route
                 selectFloor(start.floorNumber)
             }.onFailure { err ->
+                activeIndoorRoute = null
                 indoorRouteError = err.message ?: "Failed to calculate route"
             }
         }
+    }
+
+    /** Switches between any route and step-free routes (accessible elevators only), recalculating the open route. */
+    fun toggleAccessibleRouting() {
+        isAccessibleRouting = !isAccessibleRouting
+        val start = indoorRouteStartLocation
+        val end = indoorRouteEndLocation
+        if (start != null && end != null) requestIndoorRoute(start, end)
     }
 
     fun clearIndoorRoute() {

@@ -58,6 +58,7 @@ interface IndoorRoutingRepository {
     suspend fun calculateRoute(
         mallId: Long,
         start: NavLocation,
-        end: NavLocation
+        end: NavLocation,
+        accessibleOnly: Boolean = false
     ): Result<IndoorRoute>
 }

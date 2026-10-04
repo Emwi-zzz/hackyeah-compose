@@ -33,9 +33,10 @@ class RemoteIndoorRoutingRepository(
     override suspend fun calculateRoute(
         mallId: Long,
         start: NavLocation,
-        end: NavLocation
+        end: NavLocation,
+        accessibleOnly: Boolean
     ): Result<IndoorRoute> =
-        get<RouteDto>(ApiPaths.route(mallId, start.id, end.id)).map { it.toRoute() }
+        get<RouteDto>(ApiPaths.route(mallId, start.id, end.id, accessibleOnly)).map { it.toRoute() }
 
     private fun NavLocationDto.toNav() = NavLocation(
         id = id,
