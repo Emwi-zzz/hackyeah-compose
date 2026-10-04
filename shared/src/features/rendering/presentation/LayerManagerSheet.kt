@@ -1,5 +1,6 @@
 package features.rendering.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +22,8 @@ import kotlin.math.roundToInt
 @Composable
 fun LayerManagerSheet(
     mapState: MapState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onConfigureBackend: (() -> Unit)? = null
 ) {
     // Subscribes this sheet to visibility/opacity changes of layers
     mapState.layerRegistry.revision
@@ -167,6 +169,36 @@ fun LayerManagerSheet(
             }
 
             Spacer(modifier = Modifier.height(10.dp))
+            Surface(
+                shape = AppShapes.Control,
+                color = AppColors.SurfaceRaised,
+                border = AppBorder,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = onConfigureBackend != null) { onConfigureBackend?.invoke() }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Backend Server API", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
+                        Text(core.network.BackendConfig.baseUrl, fontSize = 10.sp, color = AppColors.TextMuted, maxLines = 1)
+                    }
+                    if (onConfigureBackend != null) {
+                        Surface(
+                            shape = AppShapes.Pill,
+                            color = AppColors.AccentSoft,
+                            modifier = Modifier.padding(start = 6.dp)
+                        ) {
+                            Text("Change", fontSize = 10.sp, color = AppColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
             Surface(
                 shape = AppShapes.Control,
                 color = AppColors.SuccessSoft,

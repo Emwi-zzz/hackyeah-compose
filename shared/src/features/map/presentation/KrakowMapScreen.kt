@@ -341,23 +341,38 @@ fun KrakowMapScreen() {
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                         .padding(bottom = 20.dp)
-                        .clickable { mapState.loadIndoorData() }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text("⚠️", fontSize = 13.sp)
                         Text(
-                            "Indoor backend offline ($error) • Retry",
+                            text = if (isCompact) "Backend offline" else "Backend offline ($error)",
                             color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
+                        // Dedicated Retry Button
                         Surface(
                             shape = AppShapes.Pill,
                             color = Color(0x33FFFFFF),
+                            modifier = Modifier.clickable { mapState.loadIndoorData() }
+                        ) {
+                            Text(
+                                "🔄 Retry",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        // Dedicated Host / Settings Button
+                        Surface(
+                            shape = AppShapes.Pill,
+                            color = Color(0x4DFFFFFF),
                             modifier = Modifier.clickable {
                                 backendUrlInput = BackendConfig.baseUrl
                                 showBackendConfigDialog = true
@@ -367,8 +382,8 @@ fun KrakowMapScreen() {
                                 "⚙️ Host",
                                 color = Color.White,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
@@ -413,6 +428,10 @@ fun KrakowMapScreen() {
             if (mapState.isLayerManagerOpen) {
                 LayerManagerSheet(
                     mapState = mapState,
+                    onConfigureBackend = {
+                        backendUrlInput = BackendConfig.baseUrl
+                        showBackendConfigDialog = true
+                    },
                     modifier = Modifier
                         .align(if (isCompact) Alignment.BottomCenter else Alignment.TopEnd)
                         .navigationBarsPadding()
