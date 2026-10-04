@@ -4,19 +4,17 @@ import core.geometry.GeoPoint
 import core.geometry.PolylineMath
 import features.indoor.domain.NavLocationType
 import features.map.presentation.MapState
-import kotlinx.coroutines.runBlocking
 import kotlin.test.*
 
 class OutdoorRoutingTest {
 
-    private fun stateWithRoute(): Pair<MapState, FakeIndoorRoutingRepository> = runBlocking {
+    private fun stateWithRoute(): Pair<MapState, FakeIndoorRoutingRepository> {
         val repo = FakeIndoorRoutingRepository()
         val state = createTestMapState(repo)
-        state.reloadIndoorData()
         state.updateUserLocation(GeoPoint(50.06, 19.93))
         val store = state.getAvailableNavLocations().first { it.type == NavLocationType.STORE }
         state.requestIndoorRoute(state.userLocationNav!!, store)
-        state to repo
+        return state to repo
     }
 
     @Test
@@ -74,11 +72,10 @@ class OutdoorRoutingTest {
     }
 
     @Test
-    fun gpsFixesDriveTheRouteAndVagueFixesDoNotReroute() = runBlocking {
+    fun gpsFixesDriveTheRouteAndVagueFixesDoNotReroute() {
         val repo = FakeIndoorRoutingRepository()
         val gps = FakeLocationSource()
         val state = createTestMapState(repo, gps)
-        state.reloadIndoorData()
         state.toggleGps()
         assertTrue(gps.running)
 

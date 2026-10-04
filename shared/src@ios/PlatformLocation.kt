@@ -15,9 +15,9 @@ actual object PlatformLocation : LocationSource {
     // CLLocationManager holds its delegate weakly, so keep a strong reference here
     private var delegate: Delegate? = null
 
-    override val isSupported: Boolean get() = CLLocationManager.locationServicesEnabled()
+    actual override val isSupported: Boolean get() = CLLocationManager.locationServicesEnabled()
 
-    override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
+    actual override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
         val newDelegate = Delegate(onFix, onError)
         delegate = newDelegate
         manager.delegate = newDelegate
@@ -27,7 +27,7 @@ actual object PlatformLocation : LocationSource {
         manager.startUpdatingLocation()
     }
 
-    override fun stop() {
+    actual override fun stop() {
         manager.stopUpdatingLocation()
         manager.delegate = null
         delegate = null

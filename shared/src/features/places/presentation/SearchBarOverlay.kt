@@ -37,7 +37,7 @@ fun SearchBarOverlay(
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
     Surface(
-        modifier = modifier.width(360.dp),
+        modifier = modifier.widthIn(max = 440.dp).fillMaxWidth(),
         shape = AppShapes.Card,
         color = AppColors.Surface,
         border = AppBorder,

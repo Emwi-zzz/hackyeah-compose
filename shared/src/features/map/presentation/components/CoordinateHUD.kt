@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import core.geometry.GeoPoint
@@ -22,7 +23,8 @@ import kotlin.math.roundToInt
 fun CoordinateHUD(
     mapState: MapState,
     hoveredScreenOffset: Offset?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val center = mapState.viewport.center
     val zoom = mapState.viewport.zoom
@@ -49,39 +51,56 @@ fun CoordinateHUD(
         modifier = modifier
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Zoom indicator
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text("Zoom:", fontSize = 10.sp, color = AppColors.TextMuted)
                 val zoomStr = ((zoom * 10.0).roundToInt() / 10.0).toString()
                 Text(zoomStr, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
             }
 
-            // Tile coordinate indicator
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Tile:", fontSize = 10.sp, color = AppColors.TextMuted)
-                Text("$zInt / $centerTileX / $centerTileY", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary)
+            // Tile coordinate indicator (omitted in compact mobile view unless debug)
+            if (!compact || mapState.isDebugStatsOpen) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Tile:", fontSize = 10.sp, color = AppColors.TextMuted)
+                    Text("$zInt/$centerTileX/$centerTileY", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary)
+                }
             }
 
             // Coordinates (hovered or center)
             val displayGeo = hoveredGeo ?: center
-            val latStr = ((displayGeo.latitude * 100000.0).roundToInt() / 100000.0).toString()
-            val lonStr = ((displayGeo.longitude * 100000.0).roundToInt() / 100000.0).toString()
+            val latStr = ((displayGeo.latitude * 10000.0).roundToInt() / 10000.0).toString()
+            val lonStr = ((displayGeo.longitude * 10000.0).roundToInt() / 10000.0).toString()
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(if (hoveredGeo != null) "Cursor:" else "Center:", fontSize = 10.sp, color = AppColors.TextMuted)
-                Text("$latStr° N, $lonStr° E", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Accent)
+                Text("$latStr°, $lonStr°", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Accent)
             }
-
-            // Attribution
-            Text(
-                text = mapState.activeTileSource.attribution,
-                fontSize = 9.sp,
-                color = AppColors.TextSecondary
-            )
         }
+    }
+}
+
+@Composable
+fun MapAttribution(
+    mapState: MapState,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = AppShapes.Pill,
+        color = AppColors.Surface.copy(alpha = 0.85f),
+        border = AppBorder,
+        modifier = modifier
+    ) {
+        Text(
+            text = mapState.activeTileSource.attribution,
+            fontSize = 9.sp,
+            color = AppColors.TextMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
     }
 }

@@ -48,9 +48,36 @@ fun PresetLocationsBar(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Step-free Accessible Routing Filter Chip
+        val accessible = mapState.isAccessibleRouting
+        Surface(
+            shape = AppShapes.Pill,
+            color = if (accessible) AppColors.Accent else AppColors.Surface,
+            border = if (accessible) null else AppBorder,
+            shadowElevation = 3.dp,
+            modifier = Modifier
+                .clip(AppShapes.Pill)
+                .clickable { mapState.toggleAccessibleRouting() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("♿", fontSize = 13.sp)
+                Text(
+                    text = if (accessible) "Step-free: ON" else "Step-free",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (accessible) AppColors.OnAccent else AppColors.TextPrimary
+                )
+            }
+        }
+
         for (preset in KRAKOW_PRESETS) {
             Surface(
                 shape = AppShapes.Pill,

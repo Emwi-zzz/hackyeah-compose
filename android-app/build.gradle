@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = 'hello.world'
+    namespace = 'pl.krakow.map'
     compileSdk = 36
 
     defaultConfig {
-        applicationId = 'hello.world'
+        applicationId = 'pl.krakow.map'
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -21,6 +21,7 @@ android {
         main {
             manifest.srcFile 'src/AndroidManifest.xml'
             java.srcDirs = ['src']
+            res.srcDirs = ['src/res']
         }
     }
 }

@@ -18,11 +18,11 @@ private external fun watchPosition(onFix: (Double, Double, Double) -> Unit, onEr
 private external fun clearWatch(id: Int)
 
 actual object PlatformLocation : LocationSource {
-    override val isSupported: Boolean get() = hasGeolocation()
+    actual override val isSupported: Boolean get() = hasGeolocation()
 
     private var watchId: Int? = null
 
-    override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
+    actual override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
         if (!hasGeolocation()) {
             onError("This browser has no location support")
             return
@@ -34,7 +34,7 @@ actual object PlatformLocation : LocationSource {
         )
     }
 
-    override fun stop() {
+    actual override fun stop() {
         watchId?.let { clearWatch(it) }
         watchId = null
     }

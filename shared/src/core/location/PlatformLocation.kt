@@ -18,4 +18,8 @@ interface LocationSource {
  * Device position: browser Geolocation API (wasm), LocationManager (Android), CoreLocation (iOS).
  * Plain desktop JVM has no location source, so [isSupported] is false there.
  */
-expect object PlatformLocation : LocationSource
+expect object PlatformLocation : LocationSource {
+    override val isSupported: Boolean
+    override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit)
+    override fun stop()
+}
