@@ -18,6 +18,7 @@ class AdminDraftLayer(
     private val previewPointProvider: () -> GeoPoint?,
     private val vertexHandlesProvider: () -> List<GeoPoint>,
     private val curveControlHandlesProvider: () -> List<GeoPoint>,
+    private val pendingEscalatorProvider: () -> Pair<GeoPoint, Boolean>? = { null },
     override val id: String = ID,
     override val name: String = "Admin drawing",
     override val description: String = "Shape being drawn in the admin panel",
@@ -30,7 +31,8 @@ class AdminDraftLayer(
         val pts = pointsProvider()
         val vertexHandles = vertexHandlesProvider()
         val curveControlHandles = curveControlHandlesProvider()
-        if (pts.isEmpty() && vertexHandles.isEmpty() && curveControlHandles.isEmpty()) return
+        val pendingEscalator = pendingEscalatorProvider()
+        if (pts.isEmpty() && vertexHandles.isEmpty() && curveControlHandles.isEmpty() && pendingEscalator == null) return
         val screen = pts.map { context.geoToScreen(it) }
         val color = Color(0xFFF59E0B)
         val scope = context.drawScope
@@ -80,6 +82,19 @@ class AdminDraftLayer(
             scope.drawCircle(Color.White, radius = 7f, center = handle)
             scope.drawCircle(Color(0xFF9333EA), radius = 7f, center = handle, style = Stroke(width = 2.5f))
             scope.drawCircle(Color(0xFF9333EA), radius = 2f, center = handle)
+        }
+        pendingEscalator?.let { (geo, isUp) ->
+            val center = context.geoToScreen(geo)
+            val bg = if (isUp) Color(0xFF059669) else Color(0xFFD97706)
+            val topLeft = Offset(center.x - 14f, center.y - 9f)
+            val size = androidx.compose.ui.geometry.Size(28f, 18f)
+            val corner = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+            scope.drawRoundRect(bg, topLeft, size, corner)
+            scope.drawRoundRect(Color.White, topLeft, size, corner, style = Stroke(width = 2f))
+            val arrow = if (isUp) -1f else 1f
+            val tip = Offset(center.x, center.y + 4f * arrow)
+            scope.drawLine(Color.White, tip, Offset(center.x - 4f, center.y - 2f * arrow), strokeWidth = 2f)
+            scope.drawLine(Color.White, tip, Offset(center.x + 4f, center.y - 2f * arrow), strokeWidth = 2f)
         }
     }
 

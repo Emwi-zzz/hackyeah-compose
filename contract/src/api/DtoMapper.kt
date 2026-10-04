@@ -40,7 +40,7 @@ object DtoMapper {
         stores = stores.map { it.toDto() },
         elevators = elevators.map { ElevatorDto(it.id, it.coordinates.toDto(), it.isAccessible) },
         escalators = escalators.map {
-            EscalatorDto(it.id, it.coordinates.toDto(), it.direction.name, it.isAccessible)
+            EscalatorDto(it.id, it.coordinates.toDto(), it.direction.name, it.isAccessible, it.exitCoordinates.toDto())
         },
         voids = voids.map { it.toSvgPath() },
     )
@@ -76,7 +76,8 @@ object DtoMapper {
                 elevators = f.elevators.map { Elevator(it.id, it.position.toDomain(), it.isAccessible) },
                 escalators = f.escalators.map {
                     Escalator(
-                        it.id, it.position.toDomain(), EscalatorDirection.valueOf(it.direction), it.isAccessible
+                        it.id, it.position.toDomain(), EscalatorDirection.valueOf(it.direction), it.isAccessible,
+                        (it.exitPosition ?: it.position).toDomain()
                     )
                 },
                 voids = f.voids.map { Path2D.fromSvgPath(it) },

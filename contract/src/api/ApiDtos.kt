@@ -78,7 +78,9 @@ data class EscalatorDto(
     val id: Long,
     val position: PointDto,
     val direction: String,
-    val isAccessible: Boolean = false
+    val isAccessible: Boolean = false,
+    /** Landing point on the target floor; defaults to [position] when absent. */
+    val exitPosition: PointDto? = null,
 ) // "UP" | "DOWN"
 
 @Serializable

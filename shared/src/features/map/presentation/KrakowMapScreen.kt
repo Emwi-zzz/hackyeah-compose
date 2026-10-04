@@ -83,7 +83,8 @@ fun KrakowMapScreen() {
                     { admin.curvedEdges.toList() },
                     { admin.previewPoint },
                     { admin.editableVertexHandles },
-                    { admin.editableControlHandles }
+                    { admin.editableControlHandles },
+                    { admin.pendingEscalatorMarker }
                 )
             )
         }

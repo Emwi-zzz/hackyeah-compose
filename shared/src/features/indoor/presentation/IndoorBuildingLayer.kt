@@ -359,6 +359,30 @@ class IndoorBuildingLayer(
                 }
             }
 
+            // 5b. Escalator exits: landing points of escalators arriving from adjacent floors
+            for (source in curMall.floors) {
+                for (escalator in source.escalators) {
+                    val step = if (escalator.direction == EscalatorDirection.UP) 1 else -1
+                    if (source.number + step != floor.number) continue
+                    val sp = mapToScreen(escalator.exitCoordinates)
+                    val bg = if (step > 0) Color(0xFF059669) else Color(0xFFD97706)
+                    context.drawScope.drawCircle(color = bg.copy(alpha = 0.95f * opacity), radius = 9f, center = sp)
+                    context.drawScope.drawCircle(
+                        color = Color.White.copy(alpha = opacity), radius = 9f, center = sp, style = Stroke(width = 1.5f)
+                    )
+                    if (measurer != null) {
+                        val layout = measurer.measure(
+                            text = "⇲",
+                            style = TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        )
+                        context.drawScope.drawText(
+                            textLayoutResult = layout,
+                            topLeft = Offset(sp.x - layout.size.width / 2f, sp.y - layout.size.height / 2f)
+                        )
+                    }
+                }
+            }
+
             // 6. Mall Outer Entry Points
             for (entry in curMall.entryPoints) {
                 val sp = mapToScreen(entry)

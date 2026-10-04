@@ -64,6 +64,7 @@ class AdminState(
     var entranceName by mutableStateOf("")
 
     private var tempId = 0L
+    private var pendingEscalator by mutableStateOf<PendingEscalator?>(null)
 
     init {
         mapState.mapClickInterceptor = ::onMapClick
@@ -74,6 +75,13 @@ class AdminState(
         get() = if (isDrawingPolygon) cursorGeo?.let { point ->
             points.lastOrNull()?.let { constrainDrawingPoint(it, point, shiftPressed, ctrlPressed) }
         } else null
+
+    val pendingEscalatorMarker: Pair<GeoPoint, Boolean>?
+        get() {
+            val mall = draft ?: return null
+            val pending = pendingEscalator?.takeIf { it.floor == mapState.currentFloorNumber } ?: return null
+            return mall.pointToGeo(pending.entry) to (pending.direction == EscalatorDirection.UP)
+        }
 
     val editableVertexHandles: List<GeoPoint>
         get() {
@@ -139,6 +147,7 @@ class AdminState(
 
     fun startEditing() {
         val mall = mapState.focusedMall ?: return fail("No gallery in focus")
+        pendingEscalator = null
         message = null
         draft = mall
         isNew = false
@@ -151,6 +160,7 @@ class AdminState(
     }
 
     fun selectTool(newTool: AdminTool) {
+        pendingEscalator = null
         points.clear()
         curvedEdges.clear()
         isBezierDrawing = false
@@ -318,6 +328,7 @@ class AdminState(
     /** Drops unsaved changes and restores the gallery data from the backend. */
     fun discard() {
         val hadDraft = draft != null
+        pendingEscalator = null
         draft = null
         isNew = false
         isDirty = false
@@ -407,16 +418,53 @@ class AdminState(
         val radius = d.size.x * 0.03
         when (tool) {
             AdminTool.ELEVATOR -> editFloor(floor.number) {
-                it.copy(elevators = it.elevators + Elevator(nextId(it.elevators.map { e -> e.id }), p))
+                val snapped = snapToElevator(d, floor.number, p)
+                it.copy(elevators = it.elevators + Elevator(nextId(it.elevators.map { e -> e.id }), snapped))
             }
-            AdminTool.ESCALATOR_UP, AdminTool.ESCALATOR_DOWN -> editFloor(floor.number) {
-                val dir = if (tool == AdminTool.ESCALATOR_UP) EscalatorDirection.UP else EscalatorDirection.DOWN
-                it.copy(escalators = it.escalators + Escalator(nextId(it.escalators.map { e -> e.id }), p, dir))
-            }
+            AdminTool.ESCALATOR_UP, AdminTool.ESCALATOR_DOWN -> placeEscalator(d, floor, tool, p)
             AdminTool.DELETE -> delete(d, floor, p, radius)
             else -> Unit
         }
     }
+
+    /** Elevators do not shift horizontally, so a new one snaps exactly onto a nearby lift of another floor. */
+    private fun snapToElevator(d: Mall, floorNumber: Int, p: Point): Point {
+        val radius = d.size.x * 0.02
+        return d.floors.asSequence()
+            .filter { it.number != floorNumber }
+            .flatMap { it.elevators.asSequence() }
+            .map { it.coordinates }
+            .minByOrNull { pointDistanceSquared(it, p) }
+            ?.takeIf { pointDistanceSquared(it, p) <= radius * radius }
+            ?: p
+    }
+
+    /** Two-step placement: entry on the current floor, then the exit on the floor the escalator leads to. */
+    private fun placeEscalator(d: Mall, floor: Floor, tool: AdminTool, p: Point) {
+        val direction = if (tool == AdminTool.ESCALATOR_UP) EscalatorDirection.UP else EscalatorDirection.DOWN
+        val pending = pendingEscalator
+        if (pending == null || pending.direction != direction || pending.floor == floor.number) {
+            val target = floor.number + direction.step()
+            if (d.getFloor(target) == null) return fail("There is no floor $target for this escalator to lead to")
+            pendingEscalator = PendingEscalator(floor.number, p, direction)
+            ok("Entry placed. Switch to floor $target and click the exit point.")
+            return
+        }
+        val targetNumber = pending.floor + direction.step()
+        if (floor.number != targetNumber) {
+            return fail("Switch to floor $targetNumber and click the exit point")
+        }
+        editFloor(pending.floor) {
+            val id = nextId(it.escalators.map { e -> e.id })
+            it.copy(escalators = it.escalators + Escalator(id, pending.entry, direction, exitCoordinates = p))
+        }
+        pendingEscalator = null
+        ok("Escalator added")
+    }
+
+    private fun EscalatorDirection.step() = if (this == EscalatorDirection.UP) 1 else -1
+
+    private data class PendingEscalator(val floor: Int, val entry: Point, val direction: EscalatorDirection)
 
     private data class EditableShape(val target: ShapeTarget, val path: Path2D)
 

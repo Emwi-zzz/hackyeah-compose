@@ -71,7 +71,13 @@ fun LayerManagerSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f, fill = false)
             ) {
-                items(mapState.layerRegistry.layers.sortedByDescending { it.zIndex }) { layer ->
+                // Read inside the lazy scope so item content recomposes on revision change
+                val revision = mapState.layerRegistry.revision
+                items(
+                    items = mapState.layerRegistry.layers.sortedByDescending { it.zIndex },
+                    key = { it.id }
+                ) { layer ->
+                    check(revision >= 0)
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = if (layer.isVisible) Color(0xFFF8FAFC) else Color(0xFFF1F5F9),
