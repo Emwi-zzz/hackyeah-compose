@@ -20,7 +20,10 @@ import features.map.presentation.MapState
 @Composable
 fun MapControls(
     mapState: MapState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showAdmin: Boolean = false,
+    isAdminOpen: Boolean = false,
+    onToggleAdmin: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -62,6 +65,19 @@ fun MapControls(
             }
         }
 
+        // GPS / User location toggle & center
+        RoundToolButton(
+            icon = if (mapState.isGpsOn) "📍" else "🛰️",
+            active = mapState.isGpsOn,
+            activeColor = AppColors.Accent
+        ) {
+            if (!mapState.isGpsOn) {
+                mapState.toggleGps()
+            } else {
+                mapState.userLocation?.let { mapState.flyTo(it, 16.5) } ?: mapState.toggleGps()
+            }
+        }
+
         // Recenter on Krakow Center
         RoundToolButton(icon = "🎯", active = false) { mapState.resetToKrakow() }
 
@@ -73,6 +89,17 @@ fun MapControls(
         // Tile Source selector toggle
         RoundToolButton(icon = "🗺️", active = mapState.isTileSelectorOpen) {
             mapState.isTileSelectorOpen = !mapState.isTileSelectorOpen
+        }
+
+        // Admin toggle (when enabled in mobile/compact view)
+        if (showAdmin && onToggleAdmin != null) {
+            RoundToolButton(
+                icon = "🛠️",
+                active = isAdminOpen,
+                activeColor = AppColors.Accent
+            ) {
+                onToggleAdmin()
+            }
         }
 
         // Debug & Render inspector toggle
@@ -87,7 +114,7 @@ fun MapControls(
 }
 
 @Composable
-private fun RoundToolButton(
+fun RoundToolButton(
     icon: String,
     active: Boolean,
     activeColor: Color = AppColors.Accent,

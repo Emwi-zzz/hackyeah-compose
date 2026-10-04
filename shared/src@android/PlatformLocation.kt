@@ -22,10 +22,10 @@ actual object PlatformLocation : LocationSource {
         permissionRequester = requestPermission
     }
 
-    override val isSupported: Boolean get() = context != null
+    actual override val isSupported: Boolean get() = context != null
 
     @SuppressLint("MissingPermission")
-    override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
+    actual override fun start(onFix: (LocationFix) -> Unit, onError: (String) -> Unit) {
         val ctx = context ?: return onError("Location is not initialised")
         if (!hasPermission(ctx)) {
             val requester = permissionRequester ?: return onError("Location permission is missing")
@@ -53,7 +53,7 @@ actual object PlatformLocation : LocationSource {
         providers.mapNotNull { manager.getLastKnownLocation(it) }.maxByOrNull { it.time }?.let(::emit)
     }
 
-    override fun stop() {
+    actual override fun stop() {
         val ctx = context ?: return
         listener?.let { (ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(it) }
         listener = null

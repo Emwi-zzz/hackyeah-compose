@@ -20,5 +20,9 @@ dependencies {
 compose.desktop {
     application {
         mainClass = 'MainKt'
+        jvmArgs.addAll(
+            "-Dskiko.renderApi=SOFTWARE",
+            "--enable-native-access=ALL-UNNAMED"
+        )
     }
 }
