@@ -209,7 +209,11 @@ class IndoorRoutingService {
                 shop.doors.forEach { addNode(RouteNode(floor.number, it)) }
             }
             floor.elevators.forEach { addNode(RouteNode(floor.number, it.coordinates)) }
-            floor.escalators.forEach { addNode(RouteNode(floor.number, it.coordinates)) }
+            floor.escalators.forEach {
+                addNode(RouteNode(floor.number, it.coordinates))
+                val target = floor.number + if (it.direction == EscalatorDirection.UP) 1 else -1
+                if (mall.getFloor(target) != null) addNode(RouteNode(target, it.exitCoordinates))
+            }
         }
 
         val rides = buildRides(mall, nodes, accessibleOnly)
@@ -299,12 +303,11 @@ class IndoorRoutingService {
                     EscalatorDirection.UP -> upper
                     EscalatorDirection.DOWN -> lower
                 } ?: continue
-                val landing = target.escalators.minByOrNull { distance(it.coordinates, escalator.coordinates) }
-                    ?.takeIf { !accessibleOnly || it.isAccessible } ?: continue
+                val landing = escalator.exitCoordinates
                 link(
                     nodeIndex(floor.number, escalator.coordinates),
-                    nodeIndex(target.number, landing.coordinates),
-                    ESCALATOR_COST + distance(escalator.coordinates, landing.coordinates)
+                    nodeIndex(target.number, landing),
+                    ESCALATOR_COST
                 )
             }
         }

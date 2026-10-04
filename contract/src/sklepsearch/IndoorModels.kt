@@ -41,6 +41,8 @@ data class Escalator(
     val coordinates: Point,
     val direction: EscalatorDirection = EscalatorDirection.UP,
     val isAccessible: Boolean = false,
+    // landing point on the target floor (floor + 1 for UP, floor - 1 for DOWN); differs from [coordinates]
+    val exitCoordinates: Point = coordinates,
 )
 
 data class Floor(

@@ -44,6 +44,7 @@ class MapState(
             screenHeight = 600f
         )
     )
+    val isDetailedView: Boolean get() = viewport.zoom >= IndoorBuildingLayer.DETAIL_ZOOM_THRESHOLD
 
     var activeTileSource by mutableStateOf(OpenTileSources.DEFAULT)
     var selectedPlace by mutableStateOf<Place?>(null)
@@ -125,6 +126,22 @@ class MapState(
 
     /** Admin tools hook: return true to consume a map click. */
     var mapClickInterceptor: ((GeoPoint) -> Boolean)? = null
+
+    fun geoAtScreen(offset: Offset): GeoPoint = WebMercatorProjection.screenToGeo(
+        screenOffset = offset,
+        center = viewport.center,
+        zoom = viewport.zoom,
+        screenWidth = viewport.screenWidth,
+        screenHeight = viewport.screenHeight
+    )
+
+    fun screenAtGeo(point: GeoPoint): Offset = WebMercatorProjection.geoToScreen(
+        geo = point,
+        center = viewport.center,
+        zoom = viewport.zoom,
+        screenWidth = viewport.screenWidth,
+        screenHeight = viewport.screenHeight
+    )
 
     /** Replaces (or adds) a mall in the list, e.g. an admin draft, and focuses it. */
     fun replaceMall(mall: Mall) {
@@ -611,4 +628,3 @@ class MapState(
         const val SIMULATION_TICK_MS = 200L
     }
 }
-

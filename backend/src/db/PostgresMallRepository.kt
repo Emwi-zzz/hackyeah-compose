@@ -66,11 +66,12 @@ class PostgresMallRepository(private val ds: DataSource) : MallRepository {
             it.getInt(1) to Elevator(it.getLong(2), Point(it.getDouble(3), it.getDouble(4)), it.getBoolean(5))
         }.groupBy({ it.first }, { it.second })
 
-        val escalators = query(c, "SELECT floor_number, id, x, y, direction, is_accessible FROM escalators WHERE mall_id = ? ORDER BY floor_number, id", id) {
+        val escalators = query(c, "SELECT floor_number, id,         x, y, direction, is_accessible, exit_x, exit_y FROM escalators WHERE mall_id = ? ORDER BY floor_number, id", id) {
             it.getInt(1) to Escalator(
                 it.getLong(2), Point(it.getDouble(3), it.getDouble(4)),
-                EscalatorDirection.valueOf(it.getString(5)), it.getBoolean(6)
-            )
+                        EscalatorDirection.valueOf(it.getString(5)), it.getBoolean(6),
+                        Point(it.getDouble(7), it.getDouble(8))
+                    )
         }.groupBy({ it.first }, { it.second })
 
         val voids = query(c, "SELECT floor_number, outline FROM floor_voids WHERE mall_id = ? ORDER BY floor_number, idx", id) {
@@ -157,10 +158,11 @@ class PostgresMallRepository(private val ds: DataSource) : MallRepository {
                 }
             }
             for (e in f.escalators) {
-                c.prepareStatement("INSERT INTO escalators (mall_id, floor_number, id, x, y, direction, is_accessible) VALUES (?,?,?,?,?,?,?)").use {
+                c.prepareStatement("INSERT INTO escalators (mall_id, floor_number, id, x, y,                 direction, is_accessible, exit_x, exit_y) VALUES (?,?,?,?,?,?,?,?,?)").use {
                     it.setLong(1, mall.id); it.setInt(2, f.number); it.setLong(3, e.id)
                     it.setDouble(4, e.coordinates.x); it.setDouble(5, e.coordinates.y); it.setString(6, e.direction.name)
                     it.setBoolean(7, e.isAccessible)
+                                    it.setDouble(8, e.exitCoordinates.x); it.setDouble(9, e.exitCoordinates.y)
                     it.executeUpdate()
                 }
             }

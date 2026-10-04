@@ -85,7 +85,18 @@ fun KrakowMapScreen() {
 
     val adminState = remember {
         AdminState(mapState, coroutineScope).also { admin ->
-            layerRegistry.registerLayer(AdminDraftLayer({ admin.points.toList() }, { admin.isDrawingPolygon }))
+            layerRegistry.registerLayer(
+                AdminDraftLayer(
+                    { admin.points.toList() },
+                    { admin.isDrawingPolygon },
+                    { admin.isBezierDrawing },
+                    { admin.curvedEdges.toList() },
+                    { admin.previewPoint },
+                    { admin.editableVertexHandles },
+                    { admin.editableControlHandles },
+                    { admin.pendingEscalatorMarker }
+                )
+            )
         }
     }
 
@@ -99,6 +110,12 @@ fun KrakowMapScreen() {
             MapCanvas(
                 mapState = mapState,
                 onHover = { hoveredOffset = it },
+                onModifiersChanged = { offset, shift, ctrl ->
+                    adminState.updatePointer(mapState.geoAtScreen(offset), shift, ctrl)
+                },
+                onDragStart = adminState::beginVertexDrag,
+                onDrag = adminState::dragVertex,
+                onDragEnd = adminState::endVertexDrag,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -342,4 +359,3 @@ private fun MapPill(text: String, active: Boolean, onClick: () -> Unit) {
         )
     }
 }
-
