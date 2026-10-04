@@ -50,6 +50,19 @@ GET /api/v1/malls/1/route?from=exit_1_0&to=store_3000
 -> {"mallId":1,"levels":[{"floorNumber":0,"waypoints":[{"x":..,"y":..},...],"instructions":[...],"distanceMeters":123.4}],...}
 ```
 
+## Outdoor routing (street -> mall entrance)
+The backend routes over Kraków's pedestrian network, built once from OpenStreetMap; no external routing API is used.
+
+1. Download the Małopolska extract (~200 MB): `curl -L -o build/osm/malopolskie-latest.osm.pbf https://download.geofabrik.de/europe/poland/malopolskie-latest.osm.pbf`
+2. Build the graph (~20 s): `./gradlew :backend:buildWalkGraph` (other file: `-Ppbf=path`). Output: `backend/data/krakow-walk.graph.gz` (~8 MB, ~690k nodes).
+3. `:backend:run` loads it at startup (override the path with `WALK_GRAPH`). Without the file, `/approach` answers 503 `outdoor_unavailable`.
+
+`GET /api/v1/malls/{id}/approach?lat=..&lon=..[&to=<locId>][&accessible=true]` -> `ApproachRouteDto`: `entrance`, `outdoor` (`points[]` lat/lon starting at the user, `distanceMeters`, `durationSeconds`, turn-by-turn `instructions[]`), `indoor` (`RouteDto` from that entrance to `to`, or null), totals. The entrance is chosen by A* minimising outdoor walk + indoor walk to `to`; `accessible=true` avoids steps and `wheelchair=no` ways outdoors and escalators indoors. Error 422 `outside_network` when the position is more than 1 km from the network.
+
+The client calls it once per destination, follows progress locally and re-requests only when the user is more than 35 m off the path (`MapState.updateUserLocation`). On desktop the position is set by clicking the map ("📍 Set my location").
+
+Map data © OpenStreetMap contributors, ODbL.
+
 ## Authorization (JWT)
 Reading maps, locations and routes stays **public**. Only gallery management requires an `ADMIN` token.
 Users are stored in the `users` table (migration V3); passwords are hashed with PBKDF2-HMAC-SHA256 + random salt.

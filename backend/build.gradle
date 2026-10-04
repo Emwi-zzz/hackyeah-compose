@@ -22,6 +22,22 @@ application {
     mainClass = 'backend.MainKt'
 }
 
+tasks.named('run') {
+    workingDir = projectDir
+}
+
+// Converts an OpenStreetMap extract into data/krakow-walk.graph.gz for outdoor routing.
+// Download first: curl -L -o build/osm/malopolskie-latest.osm.pbf https://download.geofabrik.de/europe/poland/malopolskie-latest.osm.pbf
+tasks.register('buildWalkGraph', JavaExec) {
+    group = 'application'
+    description = 'Builds the Kraków pedestrian graph from an OSM PBF extract (-Ppbf=path)'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'backend.outdoor.WalkGraphBuilderKt'
+    maxHeapSize = '3g'
+    def pbf = providers.gradleProperty('pbf').orElse(rootProject.file('build/osm/malopolskie-latest.osm.pbf').path)
+    args pbf.get(), file('data/krakow-walk.graph.gz').path
+}
+
 dependencies {
     implementation project(':contract')
     implementation libs.ktor.server.core
@@ -37,6 +53,7 @@ dependencies {
     implementation libs.hikari
     implementation libs.flyway.core
     implementation libs.flyway.postgresql
+    implementation libs.osmpbf
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation libs.ktor.server.test.host

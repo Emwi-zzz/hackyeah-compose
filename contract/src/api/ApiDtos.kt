@@ -109,6 +109,26 @@ data class RouteDto(
     val estimatedTimeSeconds: Int,
 )
 
+/** Walking route over the OpenStreetMap street network; points start at the user's position. */
+@Serializable
+data class OutdoorRouteDto(
+    val points: List<GeoPointDto>,
+    val distanceMeters: Double,
+    val durationSeconds: Int,
+    val instructions: List<String>,
+)
+
+/** Route from a street position to a mall: outdoor walk to the chosen entrance, then the indoor route (if any). */
+@Serializable
+data class ApproachRouteDto(
+    val mallId: Long,
+    val entrance: NavLocationDto,
+    val outdoor: OutdoorRouteDto,
+    val indoor: RouteDto? = null,
+    val totalDistanceMeters: Double,
+    val estimatedTimeSeconds: Int,
+)
+
 @Serializable
 data class ErrorDto(val error: String, val message: String)
 
@@ -133,4 +153,8 @@ object ApiPaths {
     fun locations(id: Long) = "${mall(id)}/locations"
     fun route(id: Long, fromId: String, toId: String, accessibleOnly: Boolean = false) =
         "${mall(id)}/route?from=$fromId&to=$toId" + if (accessibleOnly) "&accessible=true" else ""
+    fun approach(id: Long, latitude: Double, longitude: Double, toId: String? = null, accessibleOnly: Boolean = false) =
+        "${mall(id)}/approach?lat=$latitude&lon=$longitude" +
+            (if (toId != null) "&to=$toId" else "") +
+            (if (accessibleOnly) "&accessible=true" else "")
 }

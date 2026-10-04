@@ -1,12 +1,15 @@
 package features.indoor.domain
 
+import core.geometry.GeoPoint
 import sklepsearch.Mall
 import sklepsearch.Path2D
 import sklepsearch.Point
 
 enum class NavLocationType {
     STORE,
-    EXIT
+    EXIT,
+    /** The user's own position outside the mall; routes from it go through the street network first. */
+    USER_LOCATION
 }
 
 data class NavLocation(
@@ -50,6 +53,23 @@ data class IndoorRoute(
     val estimatedTimeSeconds: Int
 )
 
+data class OutdoorRoute(
+    val points: List<GeoPoint>,
+    val distanceMeters: Double,
+    val durationSeconds: Int,
+    val instructions: List<String>
+)
+
+/** Walk from the street to the best entrance, then (optionally) the indoor route from that entrance. */
+data class ApproachRoute(
+    val mallId: Long,
+    val entrance: NavLocation,
+    val outdoor: OutdoorRoute,
+    val indoor: IndoorRoute?,
+    val totalDistanceMeters: Double,
+    val estimatedTimeSeconds: Int
+)
+
 interface IndoorRoutingRepository {
     suspend fun getMalls(): Result<List<Mall>>
 
@@ -61,4 +81,11 @@ interface IndoorRoutingRepository {
         end: NavLocation,
         accessibleOnly: Boolean = false
     ): Result<IndoorRoute>
+
+    suspend fun calculateApproach(
+        mallId: Long,
+        from: GeoPoint,
+        end: NavLocation?,
+        accessibleOnly: Boolean = false
+    ): Result<ApproachRoute> = Result.failure(UnsupportedOperationException("Outdoor routing is not supported"))
 }

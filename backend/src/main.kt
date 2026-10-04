@@ -8,6 +8,8 @@ import backend.data.MallCatalog
 import backend.db.Database
 import backend.db.DbConfig
 import backend.db.PostgresMallRepository
+import backend.outdoor.OutdoorRoutingService
+import backend.outdoor.WalkGraph
 import backend.routing.IndoorRoutingService
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -17,6 +19,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
+import java.io.File
 
 fun Application.module(
     catalog: MallCatalog,
@@ -24,7 +27,9 @@ fun Application.module(
     users: UserRepository,
     jwt: JwtService,
     routingService: IndoorRoutingService = IndoorRoutingService(),
+    walkGraph: WalkGraph? = null,
 ) {
+    val outdoorService = walkGraph?.let { OutdoorRoutingService(it, routingService) }
     install(ContentNegotiation) { json() }
     // Allows the wasm/web frontend served from another origin to call the API
     install(CORS) {
@@ -40,7 +45,7 @@ fun Application.module(
     apiStatusPages()
     installAuth(jwt, users)
     routing {
-        indoorApi(catalog, routingService)
+        indoorApi(catalog, routingService, outdoorService)
         authApi(users, jwt)
         adminApi(catalog, malls)
     }
@@ -53,8 +58,22 @@ fun main() {
     val users = PostgresUserRepository(ds)
     bootstrapAdmin(users, System.getenv("ADMIN_USERNAME"), System.getenv("ADMIN_PASSWORD"))
     val jwt = JwtService.fromEnv()
+    val walkGraph = loadWalkGraph(File(System.getenv("WALK_GRAPH") ?: "data/krakow-walk.graph.gz"))
 
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
     val host = System.getenv("HOST") ?: "0.0.0.0"
-    embeddedServer(CIO, port = port, host = host) { module(catalog, repository, users, jwt) }.start(wait = true)
+    embeddedServer(CIO, port = port, host = host) {
+        module(catalog, repository, users, jwt, walkGraph = walkGraph)
+    }.start(wait = true)
+}
+
+private fun loadWalkGraph(file: File): WalkGraph? {
+    if (!file.exists()) {
+        println("Walk graph ${file.absolutePath} not found: outdoor routing disabled")
+        return null
+    }
+    val started = System.currentTimeMillis()
+    return WalkGraph.load(file).also {
+        println("Walk graph loaded: ${it.nodeCount} nodes, ${it.edgeCount} edges in ${System.currentTimeMillis() - started} ms")
+    }
 }

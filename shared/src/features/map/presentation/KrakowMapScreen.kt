@@ -22,6 +22,7 @@ import features.admin.presentation.AdminToggleButton
 import features.indoor.presentation.FloorSelectorControl
 import features.indoor.presentation.IndoorBuildingLayer
 import features.indoor.presentation.IndoorRouteSearchBar
+import features.indoor.presentation.OutdoorRouteLayer
 import features.indoor.presentation.StoreDetailSheet
 import features.map.data.TileRepositoryImpl
 import features.map.presentation.components.CoordinateHUD
@@ -70,7 +71,16 @@ fun KrakowMapScreen() {
             tileRepository = tileRepository,
             layerRegistry = layerRegistry,
             scope = coroutineScope
-        )
+        ).also { state ->
+            layerRegistry.registerLayer(
+                OutdoorRouteLayer(
+                    approach = { state.activeApproach },
+                    walkedMeters = { state.outdoorProgress?.alongMeters ?: 0.0 },
+                    userLocation = { state.userLocation },
+                    accuracyMeters = { state.gpsAccuracyMeters }
+                )
+            )
+        }
     }
 
     val adminState = remember {
@@ -120,8 +130,9 @@ fun KrakowMapScreen() {
                 )
 
                 // Indoor Multi-floor Route Search Bar / Launcher Button
-                if (mapState.focusedMall != null && (mapState.isMallOnScreen() || mapState.activeIndoorRoute != null)) {
-                    if (mapState.isIndoorNavigationOpen || mapState.activeIndoorRoute != null) {
+                val hasRoute = mapState.activeIndoorRoute != null || mapState.activeApproach != null
+                if (mapState.focusedMall != null && (mapState.isMallOnScreen() || hasRoute)) {
+                    if (mapState.isIndoorNavigationOpen || hasRoute) {
                         IndoorRouteSearchBar(
                             mapState = mapState,
                             modifier = Modifier
@@ -240,36 +251,64 @@ fun KrakowMapScreen() {
                 )
             }
 
-            // Top-Left: step-free routing toggle (always visible)
-            val accessible = mapState.isAccessibleRouting
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (accessible) Color(0xFF2563EB) else Color.White,
-                shadowElevation = 4.dp,
+            // Left, below the presets bar: step-free routing toggle and the user's street position
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(top = 12.dp, start = 16.dp)
-                    .clickable { mapState.toggleAccessibleRouting() }
+                    .padding(top = 160.dp, start = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
+                val accessible = mapState.isAccessibleRouting
+                MapPill(
                     text = if (accessible) "♿ Accessible: ON" else "♿ Accessible: OFF",
-                    color = if (accessible) Color.White else Color(0xFF0F172A),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    active = accessible,
+                    onClick = { mapState.toggleAccessibleRouting() }
                 )
+                MapPill(
+                    text = when {
+                        !mapState.isGpsOn -> "🛰 Use my GPS"
+                        mapState.gpsAccuracyMeters == null -> "🛰 Locating…"
+                        else -> "🛰 GPS ±${mapState.gpsAccuracyMeters!!.toInt()} m"
+                    },
+                    active = mapState.isGpsOn,
+                    onClick = { mapState.toggleGps() }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MapPill(
+                        text = when {
+                            mapState.isPickingUserLocation -> "📍 Click on the map…"
+                            mapState.userLocation != null -> "📍 Move my location"
+                            else -> "📍 Set my location"
+                        },
+                        active = mapState.isPickingUserLocation,
+                        onClick = {
+                            if (mapState.isGpsOn) mapState.toggleGps() // a placed position would be overwritten by the next fix
+                            mapState.isPickingUserLocation = !mapState.isPickingUserLocation
+                        }
+                    )
+                    if (mapState.userLocation != null) {
+                        MapPill(text = "✕", active = false, onClick = { mapState.clearUserLocation() })
+                    }
+                }
+                AdminToggleButton(admin = adminState)
+                mapState.locationError?.let { error ->
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFFEF2F2), shadowElevation = 2.dp) {
+                        Text(
+                            error,
+                            color = Color(0xFFDC2626),
+                            fontSize = 11.sp,
+                            modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
             }
 
-            // Overlays: Admin panel
-            AdminToggleButton(
-                admin = adminState,
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
-            )
+            // Overlays: Admin panel (its toggle sits in the left column above)
             if (adminState.isOpen) {
                 AdminPanel(
                     admin = adminState,
                     mapState = mapState,
-                    modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 70.dp)
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 365.dp)
                 )
             }
 
@@ -283,6 +322,24 @@ fun KrakowMapScreen() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MapPill(text: String, active: Boolean, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (active) Color(0xFF2563EB) else Color.White,
+        shadowElevation = 4.dp,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = text,
+            color = if (active) Color.White else Color(0xFF0F172A),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
     }
 }
 

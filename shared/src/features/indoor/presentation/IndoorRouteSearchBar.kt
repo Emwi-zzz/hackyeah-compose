@@ -37,6 +37,8 @@ fun IndoorRouteSearchBar(
     var isExpanded by remember { mutableStateOf(false) }
 
     val activeRoute = mapState.activeIndoorRoute
+    val approach = mapState.activeApproach
+    val hasRoute = activeRoute != null || approach != null
 
     Surface(
         modifier = modifier
@@ -77,7 +79,18 @@ fun IndoorRouteSearchBar(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF0F172A)
                         )
-                        if (activeRoute != null) {
+                        if (approach != null) {
+                            val inside = approach.indoor?.totalDistanceMeters?.toInt()
+                            Text(
+                                text = "🚶 ${approach.outdoor.distanceMeters.toInt()} m to ${approach.entrance.name}" +
+                                    (if (inside != null) " + $inside m inside" else "") +
+                                    " • ~${approach.estimatedTimeSeconds / 60 + 1} min" +
+                                    if (mapState.isAccessibleRouting) " • ♿" else "",
+                                fontSize = 11.sp,
+                                color = Color(0xFF059669),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else if (activeRoute != null) {
                             Text(
                                 text = "${activeRoute.totalDistanceMeters.toInt()} m • ~${activeRoute.estimatedTimeSeconds / 60 + 1} min • ${activeRoute.levels.size} floor${if (activeRoute.levels.size > 1) "s" else ""}" +
                                     if (mapState.isAccessibleRouting) " • ♿" else "",
@@ -112,7 +125,7 @@ fun IndoorRouteSearchBar(
                     ) {
                         Text("✕", fontSize = 14.sp, color = Color(0xFF64748B))
                     }
-                    if (activeRoute != null) {
+                    if (hasRoute) {
                         IconButton(
                             onClick = { isExpanded = !isExpanded },
                             modifier = Modifier.size(32.dp)
@@ -125,7 +138,7 @@ fun IndoorRouteSearchBar(
 
             // Expanded Route Selection Panel
             AnimatedVisibility(
-                visible = isExpanded || activeRoute == null,
+                visible = isExpanded || !hasRoute,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
@@ -237,9 +250,11 @@ fun IndoorRouteSearchBar(
                                     }
                                 )
 
-                                val filtered = remember(searchQuery, availableLocations) {
-                                    if (searchQuery.isBlank()) availableLocations
-                                    else availableLocations.filter {
+                                val userLocation = mapState.userLocationNav.takeIf { isSelectingStart }
+                                val choices = listOfNotNull(userLocation) + availableLocations
+                                val filtered = remember(searchQuery, choices) {
+                                    if (searchQuery.isBlank()) choices
+                                    else choices.filter {
                                         it.name.contains(searchQuery, ignoreCase = true) ||
                                                 (it.category?.contains(searchQuery, ignoreCase = true) == true)
                                     }
@@ -280,7 +295,11 @@ fun IndoorRouteSearchBar(
                                                 modifier = Modifier.weight(1f)
                                             ) {
                                                 Text(
-                                                    if (loc.type == NavLocationType.EXIT) "🚪" else "🛍️",
+                                                    when (loc.type) {
+                                                        NavLocationType.EXIT -> "🚪"
+                                                        NavLocationType.USER_LOCATION -> "📍"
+                                                        NavLocationType.STORE -> "🛍️"
+                                                    },
                                                     fontSize = 14.sp
                                                 )
                                                 Column {
@@ -302,7 +321,7 @@ fun IndoorRouteSearchBar(
                                                 shape = RoundedCornerShape(4.dp)
                                             ) {
                                                 Text(
-                                                    "Floor ${if (loc.floorNumber >= 0) "+${loc.floorNumber}" else "${loc.floorNumber}"}",
+                                                    floorText(loc),
                                                     fontSize = 9.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -311,6 +330,52 @@ fun IndoorRouteSearchBar(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Street part: remaining distance and the walking steps, until the user reaches the entrance
+            val progress = mapState.outdoorProgress
+            if (approach != null && !isExpanded) {
+                val remaining = (approach.outdoor.distanceMeters - (progress?.alongMeters ?: 0.0)).coerceAtLeast(0.0)
+                Surface(
+                    color = Color(0xFFF0FDF4),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        Text(
+                            if (remaining < 15) "At the entrance: ${approach.entrance.name}"
+                            else "Outdoor: ${remaining.toInt()} m left" +
+                                if (mapState.rerouteCount > 0) " • re-routed ${mapState.rerouteCount}×" else "",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF15803D)
+                        )
+                        approach.outdoor.instructions.take(4).forEach {
+                            Text(it, fontSize = 11.sp, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        if (approach.outdoor.instructions.size > 4) {
+                            Text("…", fontSize = 11.sp, color = Color(0xFF64748B))
+                        }
+                        // Test tools: fake GPS movement along the route, and a jump off it to force a re-route
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                            OutlinedButton(
+                                onClick = { mapState.toggleWalkSimulation() },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text(if (mapState.isSimulatingWalk) "⏸ Stop walk" else "▶ Simulate walk", fontSize = 10.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { mapState.simulateWrongTurn() },
+                                enabled = remaining >= 15,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("↯ Wrong turn", fontSize = 10.sp)
                             }
                         }
                     }
@@ -368,6 +433,12 @@ fun IndoorRouteSearchBar(
     }
 }
 
+private fun floorText(location: NavLocation) = when {
+    location.type == NavLocationType.USER_LOCATION -> "Outdoor"
+    location.floorNumber >= 0 -> "Floor +${location.floorNumber}"
+    else -> "Floor ${location.floorNumber}"
+}
+
 @Composable
 private fun LocationPickerField(
     label: String,
@@ -406,7 +477,7 @@ private fun LocationPickerField(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Floor ${if (selectedLocation.floorNumber >= 0) "+${selectedLocation.floorNumber}" else "${selectedLocation.floorNumber}"}",
+                            text = floorText(selectedLocation),
                             fontSize = 10.sp,
                             color = Color(0xFF64748B)
                         )

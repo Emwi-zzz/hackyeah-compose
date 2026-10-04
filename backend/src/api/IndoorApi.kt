@@ -4,6 +4,7 @@ import api.*
 import api.DtoMapper.toDto
 import api.DtoMapper.toSummaryDto
 import backend.data.MallCatalog
+import backend.outdoor.OutdoorRoutingService
 import backend.routing.IndoorRoutingService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -27,7 +28,7 @@ fun Application.apiStatusPages() {
     }
 }
 
-fun Route.indoorApi(catalog: MallCatalog, routing: IndoorRoutingService) {
+fun Route.indoorApi(catalog: MallCatalog, routing: IndoorRoutingService, outdoor: OutdoorRoutingService? = null) {
     get("/health") { call.respond(mapOf("status" to "ok")) }
 
     route(ApiPaths.MALLS) {
@@ -54,6 +55,29 @@ fun Route.indoorApi(catalog: MallCatalog, routing: IndoorRoutingService) {
             val accessibleOnly = call.request.queryParameters["accessible"]?.toBooleanStrictOrNull() ?: false
             val route = routing.calculateRoute(mall, start, end, accessibleOnly).getOrElse {
                 throw ApiException(HttpStatusCode.UnprocessableEntity, "route_failed", it.message ?: "Route failed")
+            }
+            call.respond(route)
+        }
+        get("{mallId}/approach") {
+            val mall = call.mall(catalog)
+            val service = outdoor ?: throw ApiException(
+                HttpStatusCode.ServiceUnavailable, "outdoor_unavailable",
+                "Outdoor routing is not configured: build the walk graph (see docs-backend.md)"
+            )
+            val params = call.request.queryParameters
+            val lat = params["lat"]?.toDoubleOrNull()
+                ?: throw ApiException(HttpStatusCode.BadRequest, "bad_request", "Query parameter 'lat' is required")
+            val lon = params["lon"]?.toDoubleOrNull()
+                ?: throw ApiException(HttpStatusCode.BadRequest, "bad_request", "Query parameter 'lon' is required")
+            val destination = params["to"]?.let { toId ->
+                routing.navLocations(mall).find { it.id == toId }
+                    ?: throw ApiException(HttpStatusCode.NotFound, "location_not_found", "Location '$toId' not found in mall ${mall.id}")
+            }
+            val accessibleOnly = params["accessible"]?.toBooleanStrictOrNull() ?: false
+            val route = try {
+                service.approach(mall, lat, lon, destination, accessibleOnly)
+            } catch (e: OutdoorRoutingService.RoutingException) {
+                throw ApiException(HttpStatusCode.UnprocessableEntity, e.code, e.message ?: e.code)
             }
             call.respond(route)
         }

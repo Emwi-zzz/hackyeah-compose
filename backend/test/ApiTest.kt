@@ -56,6 +56,29 @@ class ApiTest {
     }
 
     @Test
+    fun approachEndpoint() = testApplication {
+        val graphFile = java.io.File("data/krakow-walk.graph.gz")
+        val graph = if (graphFile.exists()) backend.outdoor.WalkGraph.load(graphFile) else null
+        application {
+            module(catalog, repo, backend.auth.PostgresUserRepository(ds), backend.auth.JwtService("x".repeat(40)), walkGraph = graph)
+        }
+        val client = jsonClient()
+        val locations: List<NavLocationDto> = client.get(ApiPaths.locations(1)).body()
+        val store = locations.first { it.type == "STORE" && it.floorNumber == 1 }
+        val response = client.get(ApiPaths.approach(1, 50.0617, 19.9373, store.id))
+        if (graph == null) {
+            assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
+            return@testApplication
+        }
+        val route: ApproachRouteDto = response.body()
+        assertEquals("EXIT", route.entrance.type)
+        assertEquals(store.id, route.indoor?.end?.id)
+        assertEquals(route.entrance.id, route.indoor?.start?.id)
+        assertTrue(route.outdoor.distanceMeters in 700.0..2000.0, "outdoor ${route.outdoor.distanceMeters}")
+        assertTrue(route.outdoor.instructions.last().startsWith("Enter through"))
+    }
+
+    @Test
     fun errors() = testApplication {
         application { module(catalog, repo, backend.auth.PostgresUserRepository(ds), backend.auth.JwtService("x".repeat(40))) }
         val client = jsonClient()

@@ -73,12 +73,60 @@ class FakeIndoorRoutingRepository(
         }
         return Result.success(IndoorRoute(mallId, start, end, levels, 20.0, 60))
     }
+
+    var approachCalls = 0
+
+    /** Straight walk due east from the requested position to a fixed entrance point. */
+    override suspend fun calculateApproach(
+        mallId: Long,
+        from: core.geometry.GeoPoint,
+        end: NavLocation?,
+        accessibleOnly: Boolean
+    ): Result<ApproachRoute> {
+        approachCalls++
+        lastAccessibleOnly = accessibleOnly
+        val mall = malls.find { it.id == mallId } ?: return Result.failure(IllegalArgumentException("Mall $mallId not found"))
+        val entrance = TestIndoorData.locations(mall).first { it.type == NavLocationType.EXIT }
+        val target = core.geometry.GeoPoint(from.latitude, from.longitude + 0.01)
+        val outdoor = OutdoorRoute(listOf(from, target), core.geometry.GeoMath.haversineDistanceMeters(from, target), 550, listOf("Walk"))
+        val indoor = end?.let { calculateRoute(mallId, entrance, it, accessibleOnly).getOrThrow() }
+        return Result.success(
+            ApproachRoute(mallId, entrance, outdoor, indoor, outdoor.distanceMeters + (indoor?.totalDistanceMeters ?: 0.0), 610)
+        )
+    }
 }
 
-fun createTestMapState(repository: IndoorRoutingRepository = FakeIndoorRoutingRepository()): MapState =
+/** Location source driven by the test: call [emit] / [fail] to simulate the device. */
+class FakeLocationSource : core.location.LocationSource {
+    override val isSupported = true
+    var running = false
+    private var onFix: ((core.location.LocationFix) -> Unit)? = null
+    private var onError: ((String) -> Unit)? = null
+
+    override fun start(onFix: (core.location.LocationFix) -> Unit, onError: (String) -> Unit) {
+        running = true
+        this.onFix = onFix
+        this.onError = onError
+    }
+
+    override fun stop() {
+        running = false
+    }
+
+    fun emit(latitude: Double, longitude: Double, accuracy: Double = 5.0) =
+        onFix?.invoke(core.location.LocationFix(core.geometry.GeoPoint(latitude, longitude), accuracy))
+
+    fun fail(message: String) = onError?.invoke(message)
+}
+
+fun createTestMapState(
+    repository: IndoorRoutingRepository = FakeIndoorRoutingRepository(),
+    locationSource: core.location.LocationSource = FakeLocationSource()
+): MapState =
     MapState(
         TileRepositoryImpl(),
         LayerRegistry(emptyList()),
         CoroutineScope(Dispatchers.Unconfined),
-        repository
+        repository,
+        locationSource
     )

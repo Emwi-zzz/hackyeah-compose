@@ -20,6 +20,8 @@
 	<string>1</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your position is used to guide you to the mall entrance.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 </dict>

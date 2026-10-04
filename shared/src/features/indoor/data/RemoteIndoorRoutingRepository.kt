@@ -2,6 +2,7 @@ package features.indoor.data
 
 import api.*
 import api.DtoMapper.toDomain
+import core.geometry.GeoPoint
 import core.network.BackendConfig
 import core.network.PlatformHttp
 import features.indoor.domain.*
@@ -37,6 +38,37 @@ class RemoteIndoorRoutingRepository(
         accessibleOnly: Boolean
     ): Result<IndoorRoute> =
         get<RouteDto>(ApiPaths.route(mallId, start.id, end.id, accessibleOnly)).map { it.toRoute() }
+
+    override suspend fun calculateApproach(
+        mallId: Long,
+        from: GeoPoint,
+        end: NavLocation?,
+        accessibleOnly: Boolean
+    ): Result<ApproachRoute> {
+        val path = ApiPaths.approach(mallId, from.latitude, from.longitude, end?.id, accessibleOnly)
+        val response = PlatformHttp.request("GET", baseUrl().trimEnd('/') + path)
+            ?: return Result.failure(IllegalStateException("Backend is unreachable"))
+        if (response.status !in 200..299) {
+            val message = runCatching { json.decodeFromString<ErrorDto>(response.body).message }.getOrNull()
+            return Result.failure(IllegalStateException(message ?: "Outdoor route failed (${response.status})"))
+        }
+        return runCatching {
+            val dto = json.decodeFromString<ApproachRouteDto>(response.body)
+            ApproachRoute(
+                mallId = dto.mallId,
+                entrance = dto.entrance.toNav(),
+                outdoor = OutdoorRoute(
+                    points = dto.outdoor.points.map { GeoPoint(it.latitude, it.longitude) },
+                    distanceMeters = dto.outdoor.distanceMeters,
+                    durationSeconds = dto.outdoor.durationSeconds,
+                    instructions = dto.outdoor.instructions
+                ),
+                indoor = dto.indoor?.toRoute(),
+                totalDistanceMeters = dto.totalDistanceMeters,
+                estimatedTimeSeconds = dto.estimatedTimeSeconds
+            )
+        }
+    }
 
     private fun NavLocationDto.toNav() = NavLocation(
         id = id,
