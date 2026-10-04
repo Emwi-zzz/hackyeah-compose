@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import api.DtoMapper.toDto
 import api.TokenResponse
 import core.geometry.GeoPoint
@@ -47,7 +48,16 @@ class AdminState(
         private set
     var tool by mutableStateOf<AdminTool?>(null)
         private set
+    var isBezierDrawing by mutableStateOf(false)
+        private set
+    var isVertexEditing by mutableStateOf(false)
+        private set
+    private var cursorGeo by mutableStateOf<GeoPoint?>(null)
+    private var shiftPressed by mutableStateOf(false)
+    private var ctrlPressed by mutableStateOf(false)
+    private var activeVertexDrag: VertexDrag? = null
     val points = mutableStateListOf<GeoPoint>()
+    val curvedEdges = mutableStateListOf<Boolean>()
 
     var storeName by mutableStateOf("")
     var storeCategory by mutableStateOf("Retail")
@@ -60,6 +70,32 @@ class AdminState(
     }
 
     val isDrawingPolygon: Boolean get() = isDrawingNewOutline || tool?.kind == AdminTool.Kind.POLYGON
+    val previewPoint: GeoPoint?
+        get() = if (isDrawingPolygon) cursorGeo?.let { point ->
+            points.lastOrNull()?.let { constrainDrawingPoint(it, point, shiftPressed, ctrlPressed) }
+        } else null
+
+    val editableVertexHandles: List<GeoPoint>
+        get() {
+            if (!isVertexEditing) return emptyList()
+            val mall = draft ?: return emptyList()
+            return editableShapes().flatMap { shape ->
+                AdminShapeFactory.editablePoints(shape.path)
+                    .filter { it.anchorIndex != null }
+                    .map { mall.pointToGeo(it.point) }
+            }
+        }
+
+    val editableControlHandles: List<GeoPoint>
+        get() {
+            if (!isVertexEditing) return emptyList()
+            val mall = draft ?: return emptyList()
+            return editableShapes().flatMap { shape ->
+                AdminShapeFactory.editablePoints(shape.path)
+                    .filter { it.controlIndex != null }
+                    .map { mall.pointToGeo(it.point) }
+            }
+        }
 
     // ---- session -------------------------------------------------------------------------
 
@@ -94,7 +130,10 @@ class AdminState(
         if (draft != null) return fail("Save or discard the current gallery first")
         message = null
         tool = null
+        isBezierDrawing = false
+        isVertexEditing = false
         points.clear()
+        curvedEdges.clear()
         isDrawingNewOutline = true
     }
 
@@ -105,29 +144,105 @@ class AdminState(
         isNew = false
         isDirty = false
         tool = null
+        isBezierDrawing = false
+        isVertexEditing = false
         points.clear()
+        curvedEdges.clear()
     }
 
     fun selectTool(newTool: AdminTool) {
         points.clear()
+        curvedEdges.clear()
+        isBezierDrawing = false
+        isVertexEditing = false
         tool = if (tool == newTool) null else newTool
     }
 
+    fun toggleVertexEditing() {
+        isVertexEditing = !isVertexEditing
+        activeVertexDrag = null
+        cursorGeo = null
+        if (isVertexEditing) {
+            tool = null
+            points.clear()
+            curvedEdges.clear()
+            isBezierDrawing = false
+        }
+    }
+
+    fun updatePointer(geo: GeoPoint, shift: Boolean, ctrl: Boolean) {
+        cursorGeo = geo
+        shiftPressed = shift
+        ctrlPressed = ctrl
+    }
+
+    fun beginVertexDrag(screenOffset: Offset): Boolean {
+        if (!isVertexEditing || session == null) return false
+        val mall = draft ?: return false
+        val screenHandles = editableShapes().flatMap { shape ->
+            AdminShapeFactory.editablePoints(shape.path).map { editablePoint ->
+                val geo = mall.pointToGeo(editablePoint.point)
+                val screen = mapState.screenAtGeo(geo)
+                val dx = screen.x - screenOffset.x
+                val dy = screen.y - screenOffset.y
+                Triple(shape, editablePoint, dx * dx + dy * dy)
+            }
+        }
+        val nearest = screenHandles.minByOrNull { it.third } ?: return false
+        if (nearest.third > 18f * 18f) return false
+        val shape = nearest.first
+        activeVertexDrag = VertexDrag(shape.target, shape.path, nearest.second)
+        return true
+    }
+
+    fun dragVertex(screenOffset: Offset, shift: Boolean, ctrl: Boolean) {
+        val drag = activeVertexDrag ?: return
+        val mall = draft ?: return
+        val target = mapState.geoAtScreen(screenOffset)
+        val vertices = AdminShapeFactory.vertices(drag.path)
+        val pointIndex = drag.editablePoint.anchorIndex ?: vertices.indices.minByOrNull {
+            pointDistanceSquared(vertices[it], drag.editablePoint.point)
+        } ?: return
+        val moved = constrainDraggedVertex(vertices, pointIndex, mall.geoToPoint(target), shift, ctrl)
+        val updatedPath = AdminShapeFactory.moveEditablePoint(drag.path, drag.editablePoint, moved)
+        updateShapePath(drag.target, updatedPath)
+    }
+
+    fun endVertexDrag() {
+        activeVertexDrag = null
+    }
+
+    fun selectBezierMode(enabled: Boolean) {
+        isBezierDrawing = enabled
+    }
+
     fun undoPoint() {
-        if (points.isNotEmpty()) points.removeAt(points.size - 1)
+        if (points.isNotEmpty()) {
+            points.removeAt(points.size - 1)
+            if (curvedEdges.isNotEmpty()) curvedEdges.removeAt(curvedEdges.size - 1)
+        }
     }
 
     fun cancelDrawing() {
         points.clear()
+        curvedEdges.clear()
         isDrawingNewOutline = false
+        isBezierDrawing = false
     }
 
     fun finishDrawing() {
         if (points.size < 3) return fail("A shape needs at least 3 points")
         if (isDrawingNewOutline) {
-            val mall = MallFactory.fromOutline(newMallName, points.toList())
+            val mall = MallFactory.fromOutline(
+                newMallName,
+                points.toList(),
+                curvedEdges = curvedEdges.toList(),
+                closingBezier = isBezierDrawing
+            )
             points.clear()
+            curvedEdges.clear()
             isDrawingNewOutline = false
+            isBezierDrawing = false
             draft = mall
             isNew = true
             isDirty = true
@@ -137,7 +252,17 @@ class AdminState(
             return
         }
         val d = draft ?: return
-        if (applyPolygon(d, points.map { d.geoToPoint(it) })) points.clear()
+        if (applyPolygon(
+                d,
+                points.map { d.geoToPoint(it) },
+                curvedEdges.toList(),
+                isBezierDrawing
+            )
+        ) {
+            points.clear()
+            curvedEdges.clear()
+            isBezierDrawing = false
+        }
     }
 
     fun renameMall(name: String) = edit { it.copy(name = name) }
@@ -174,7 +299,9 @@ class AdminState(
                     isNew = false
                     isDirty = false
                     tool = null
+                    isBezierDrawing = false
                     points.clear()
+                    curvedEdges.clear()
                     if (saved != null) {
                         mapState.replaceMall(saved)
                         if (saved.getFloor(mapState.currentFloorNumber) == null) {
@@ -196,7 +323,9 @@ class AdminState(
         isDirty = false
         tool = null
         isDrawingNewOutline = false
+        isBezierDrawing = false
         points.clear()
+        curvedEdges.clear()
         if (hadDraft) scope.launch { mapState.reloadIndoorData() }
     }
 
@@ -223,7 +352,9 @@ class AdminState(
         if (session == null) return false
         val activeTool = tool
         if (isDrawingNewOutline || activeTool?.kind == AdminTool.Kind.POLYGON) {
-            points.add(geo)
+            val point = points.lastOrNull()?.let { constrainDrawingPoint(it, geo, shiftPressed, ctrlPressed) } ?: geo
+            if (points.isNotEmpty()) curvedEdges.add(isBezierDrawing)
+            points.add(point)
             return true
         }
         val d = draft ?: return false
@@ -232,8 +363,13 @@ class AdminState(
         return true
     }
 
-    private fun applyPolygon(d: Mall, local: List<Point>): Boolean {
-        val shape = Path2D.of(*local.toTypedArray())
+    private fun applyPolygon(
+        d: Mall,
+        local: List<Point>,
+        edgeModes: List<Boolean>,
+        closingBezier: Boolean
+    ): Boolean {
+        val shape = AdminShapeFactory.polygon(local, edgeModes, closingBezier)
         when (tool) {
             AdminTool.MALL_OUTLINE -> edit { it.copy(outline = shape) }
             AdminTool.FLOOR_OUTLINE -> {
@@ -280,6 +416,103 @@ class AdminState(
             AdminTool.DELETE -> delete(d, floor, p, radius)
             else -> Unit
         }
+    }
+
+    private data class EditableShape(val target: ShapeTarget, val path: Path2D)
+
+    private sealed interface ShapeTarget {
+        object MallOutline : ShapeTarget
+        object FloorOutline : ShapeTarget
+        data class StoreArea(val storeId: Long) : ShapeTarget
+    }
+
+    private data class VertexDrag(
+        val target: ShapeTarget,
+        val path: Path2D,
+        val editablePoint: AdminShapeFactory.EditablePoint
+    )
+
+    private fun editableShapes(): List<EditableShape> {
+        val mall = draft ?: return emptyList()
+        val floor = mall.getFloor(mapState.currentFloorNumber) ?: return emptyList()
+        val detailedView = mall.id == mapState.focusedMall?.id && mapState.isDetailedView
+        return buildList {
+            if (detailedView) {
+                add(EditableShape(ShapeTarget.FloorOutline, floor.box))
+                floor.stores.forEach { add(EditableShape(ShapeTarget.StoreArea(it.Instanceid), it.area)) }
+            } else {
+                val outline = mall.outline
+                if (outline != null) add(EditableShape(ShapeTarget.MallOutline, outline))
+                else add(EditableShape(ShapeTarget.FloorOutline, floor.box))
+            }
+        }
+    }
+
+    private fun updateShapePath(target: ShapeTarget, path: Path2D) {
+        val mall = draft ?: return
+        when (target) {
+            ShapeTarget.MallOutline -> edit { it.copy(outline = path) }
+            ShapeTarget.FloorOutline -> {
+                val floor = currentFloor(mall) ?: return
+                editFloor(floor.number) { it.copy(box = path) }
+            }
+            is ShapeTarget.StoreArea -> {
+                val floor = currentFloor(mall) ?: return
+                editFloor(floor.number) {
+                    it.copy(stores = it.stores.map { store ->
+                        if (store.Instanceid == target.storeId) store.copy(area = path) else store
+                    })
+                }
+            }
+        }
+    }
+
+    private fun constrainDrawingPoint(start: GeoPoint, target: GeoPoint, shift: Boolean, ctrl: Boolean): GeoPoint {
+        val horizontal = target.copy(latitude = start.latitude)
+        val vertical = target.copy(longitude = start.longitude)
+        return when {
+            shift && ctrl -> if (distanceSquared(target, horizontal) <= distanceSquared(target, vertical)) horizontal else vertical
+            shift -> horizontal
+            ctrl -> vertical
+            else -> target
+        }
+    }
+
+    private fun constrainDraggedVertex(
+        vertices: List<Point>,
+        index: Int,
+        target: Point,
+        shift: Boolean,
+        ctrl: Boolean
+    ): Point {
+        if (!shift && !ctrl || vertices.size < 2) return target
+        val previous = vertices[(index - 1 + vertices.size) % vertices.size]
+        val next = vertices[(index + 1) % vertices.size]
+        val horizontal = listOf(
+            target.copy(y = previous.y),
+            target.copy(y = next.y)
+        ).minBy { pointDistanceSquared(target, it) }
+        val vertical = listOf(
+            target.copy(x = previous.x),
+            target.copy(x = next.x)
+        ).minBy { pointDistanceSquared(target, it) }
+        return when {
+            shift && ctrl -> if (pointDistanceSquared(target, horizontal) <= pointDistanceSquared(target, vertical)) horizontal else vertical
+            shift -> horizontal
+            else -> vertical
+        }
+    }
+
+    private fun distanceSquared(a: GeoPoint, b: GeoPoint): Double {
+        val lat = a.latitude - b.latitude
+        val lon = a.longitude - b.longitude
+        return lat * lat + lon * lon
+    }
+
+    private fun pointDistanceSquared(a: Point, b: Point): Double {
+        val x = a.x - b.x
+        val y = a.y - b.y
+        return x * x + y * y
     }
 
     private fun delete(d: Mall, floor: Floor, p: Point, radius: Double) {

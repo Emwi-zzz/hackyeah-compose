@@ -14,7 +14,13 @@ object MallFactory {
      * Local space is 1000 units wide; the height keeps the real-world aspect ratio.
      * The mall gets a single floor 0 whose shape equals the outline.
      */
-    fun fromOutline(name: String, outline: List<GeoPoint>): Mall {
+    fun fromOutline(
+        name: String,
+        outline: List<GeoPoint>,
+        smoothBezier: Boolean = false,
+        curvedEdges: List<Boolean>? = null,
+        closingBezier: Boolean = smoothBezier
+    ): Mall {
         require(outline.size >= 3) { "Outline needs at least 3 points" }
         val minLat = outline.minOf { it.latitude }
         val maxLat = outline.maxOf { it.latitude }
@@ -38,9 +44,12 @@ object MallFactory {
             entryPoints = emptyList(), floors = emptyList()
         )
         val local = outline.map { frame.geoToPoint(it) }
+        val edgeModes = curvedEdges ?: List(local.size - 1) { smoothBezier }
         return frame.copy(
-            outline = Path2D.of(*local.toTypedArray()),
-            floors = listOf(Floor(0, Path2D.of(*local.toTypedArray()), emptyList(), emptyList(), emptyList()))
+            outline = AdminShapeFactory.polygon(local, edgeModes, closingBezier),
+            floors = listOf(
+                Floor(0, AdminShapeFactory.polygon(local, edgeModes, closingBezier), emptyList(), emptyList(), emptyList())
+            )
         )
     }
 

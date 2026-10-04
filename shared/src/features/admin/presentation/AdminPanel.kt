@@ -117,10 +117,11 @@ private fun HomeSection(admin: AdminState, mapState: MapState) {
 private fun NewOutlineSection(admin: AdminState) {
     Text("New gallery: ${admin.newMallName}", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
     Text(
-        "Click the corners of the building on the map (${admin.points.size} so far). " +
+        "Click around the building footprint (${admin.points.size} points so far). " +
             "This shape is shown when the map is zoomed out.",
         fontSize = 12.sp
     )
+    ShapeModeControls(admin)
     DrawButtons(admin, onCancel = { admin.cancelDrawing() })
 }
 
@@ -160,6 +161,21 @@ private fun EditorSection(admin: AdminState, mapState: MapState) {
             Chip(tool.title, admin.tool == tool) { admin.selectTool(tool) }
         }
     }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = { admin.toggleVertexEditing() }) {
+            Text(if (admin.isVertexEditing) "Done editing points" else "Drag shape points", fontSize = 12.sp)
+        }
+        if (admin.isVertexEditing) {
+            Text("Drag blue anchors or purple Bézier controls", fontSize = 11.sp, color = Color(0xFF475569))
+        }
+    }
+    if (admin.isVertexEditing) {
+        Text(
+            "Shift keeps the edge horizontal; Ctrl keeps it vertical. If both are held, the closer adjustment is used.",
+            fontSize = 11.sp,
+            color = Color(0xFF475569)
+        )
+    }
     admin.tool?.let { tool ->
         Text(tool.hint, fontSize = 12.sp, color = Color(0xFF475569))
         when (tool) {
@@ -171,6 +187,8 @@ private fun EditorSection(admin: AdminState, mapState: MapState) {
             else -> Unit
         }
         if (tool.kind == AdminTool.Kind.POLYGON) {
+            Text("${admin.points.size} points placed", fontSize = 12.sp, color = Color(0xFF475569))
+            ShapeModeControls(admin)
             DrawButtons(admin, onCancel = { admin.cancelDrawing() })
         }
     }
@@ -201,6 +219,27 @@ private fun EditorSection(admin: AdminState, mapState: MapState) {
             Text(if (admin.isNew) "Delete draft" else "Delete gallery", color = Color(0xFFB91C1C), fontSize = 12.sp)
         }
     }
+}
+
+@Composable
+private fun ShapeModeControls(admin: AdminState) {
+    Text("Next edge (closing edge when finished)", fontWeight = FontWeight.Medium, fontSize = 12.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Chip("Straight", !admin.isBezierDrawing) { admin.selectBezierMode(false) }
+        Chip("Bézier", admin.isBezierDrawing) { admin.selectBezierMode(true) }
+    }
+    Text(
+        "Choose the style before placing each point; it applies to the edge from the previous point. " +
+            "The closing edge uses the selected style when you finish. Undo removes the last point and its edge.",
+        fontSize = 11.sp,
+        color = Color(0xFF475569)
+    )
+    Text(
+        "While placing points, hold Shift for a horizontal edge or Ctrl for a vertical edge. " +
+            "If both are held, the closer alignment is used.",
+        fontSize = 11.sp,
+        color = Color(0xFF475569)
+    )
 }
 
 @Composable

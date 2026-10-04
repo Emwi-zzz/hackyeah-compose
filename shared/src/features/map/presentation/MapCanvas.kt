@@ -17,7 +17,11 @@ import features.rendering.domain.RenderContext
 fun MapCanvas(
     mapState: MapState,
     modifier: Modifier = Modifier,
-    onHover: (Offset) -> Unit = {}
+    onHover: (Offset) -> Unit = {},
+    onModifiersChanged: (Offset, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onDragStart: (Offset) -> Boolean = { false },
+    onDrag: (Offset, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onDragEnd: () -> Unit = {}
 ) {
     val textMeasurer = rememberTextMeasurer()
 
@@ -42,7 +46,7 @@ fun MapCanvas(
             .onSizeChanged { size ->
                 mapState.updateScreenSize(size.width.toFloat(), size.height.toFloat())
             }
-            .mapInteractionGestures(mapState, onHover)
+            .mapInteractionGestures(mapState, onHover, onModifiersChanged, onDragStart, onDrag, onDragEnd)
     ) {
         val renderContext = RenderContext(
             drawScope = this,
