@@ -50,13 +50,18 @@ class OutdoorRoutingTest {
     }
 
     @Test
-    fun simulatedWalkFollowsRouteWithoutCallsUntilEntrance() {
+    fun simulatedWalkSwitchesToIndoorRouteAtEntranceWithoutAnotherApproachCall() {
         val (state, repo) = stateWithRoute()
+        val originalApproach = assertNotNull(state.activeApproach)
         var steps = 0
         while (state.simulateStep(50.0)) steps++
         assertEquals(1, repo.approachCalls, "jitter stays within the off-route margin")
         assertTrue(steps in 12..16, "~715 m in 50 m steps, got $steps")
-        assertEquals(state.activeApproach!!.outdoor.points.last(), state.userLocation)
+        assertEquals(originalApproach.outdoor.points.last(), state.userLocation)
+        assertNull(state.activeApproach)
+        assertNull(state.outdoorProgress)
+        assertEquals(originalApproach.entrance, state.indoorRouteStartLocation)
+        assertEquals(originalApproach.indoor, state.activeIndoorRoute)
     }
 
     @Test

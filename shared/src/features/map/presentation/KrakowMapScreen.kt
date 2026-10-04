@@ -148,7 +148,10 @@ fun KrakowMapScreen() {
 
                 // Indoor Multi-floor Route Search Bar / Launcher Button
                 val hasRoute = mapState.activeIndoorRoute != null || mapState.activeApproach != null
-                if (mapState.focusedMall != null && (mapState.isMallOnScreen() || hasRoute)) {
+                if (mapState.activeApproach == null &&
+                    mapState.focusedMall != null &&
+                    (mapState.isMallOnScreen() || hasRoute)
+                ) {
                     if (mapState.isIndoorNavigationOpen || hasRoute) {
                         IndoorRouteSearchBar(
                             mapState = mapState,
@@ -308,6 +311,14 @@ fun KrakowMapScreen() {
                     }
                 }
                 AdminToggleButton(admin = adminState)
+                if (mapState.activeApproach != null) {
+                    IndoorRouteSearchBar(
+                        mapState = mapState,
+                        modifier = Modifier
+                            .widthIn(max = 420.dp)
+                            .padding(top = 8.dp)
+                    )
+                }
                 mapState.locationError?.let { error ->
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFFEF2F2), shadowElevation = 2.dp) {
                         Text(

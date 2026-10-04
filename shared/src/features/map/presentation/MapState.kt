@@ -385,8 +385,7 @@ class MapState(
         val along = (outdoorProgress?.alongMeters ?: 0.0) + meters
         val total = outdoorProgress?.totalMeters ?: PolylineMath.locate(line, line.first()).totalMeters
         if (along >= total) {
-            updateUserLocation(line.last())
-            selectFloor(approach.entrance.floorNumber)
+            finishApproachAtEntrance(approach)
             return false
         }
         val onLine = PolylineMath.pointAt(line, along)
@@ -396,6 +395,38 @@ class MapState(
         updateUserLocation(fix)
         viewport = viewport.withCenter(fix)
         return true
+    }
+
+    private fun finishApproachAtEntrance(approach: ApproachRoute) {
+        val entrancePoint = approach.outdoor.points.last()
+        userLocation = entrancePoint
+        isPickingUserLocation = false
+        userLockedMallId = approach.mallId
+        malls.find { it.id == approach.mallId }?.let { focusedMall = it }
+
+        val destination = indoorRouteEndLocation
+        indoorRouteStartLocation = approach.entrance
+        activeApproach = null
+        outdoorProgress = null
+        activeIndoorRoute = approach.indoor
+        selectFloor(approach.entrance.floorNumber)
+
+        if (approach.indoor == null && destination != null) {
+            requestIndoorRoute(approach.entrance, destination)
+        }
+
+        val target = focusedMall?.getBoundingBox()?.center ?: entrancePoint
+        val zoom = maxOf(viewport.zoom, IndoorBuildingLayer.DETAIL_ZOOM_THRESHOLD + 0.5).coerceAtMost(17.0)
+        val shiftX = viewport.screenWidth * 0.16f
+        val shiftY = viewport.screenHeight * 0.12f
+        val cameraCenter = WebMercatorProjection.screenToGeo(
+            screenOffset = Offset(viewport.screenWidth / 2f - shiftX, viewport.screenHeight / 2f - shiftY),
+            center = target,
+            zoom = zoom,
+            screenWidth = viewport.screenWidth,
+            screenHeight = viewport.screenHeight
+        )
+        flyTo(cameraCenter, zoom)
     }
 
     /** Jumps the user [meters] to the side of the route, which must trigger exactly one re-route. */
