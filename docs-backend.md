@@ -64,7 +64,7 @@ The client calls it once per destination, follows progress locally and re-reques
 Map data © OpenStreetMap contributors, ODbL.
 
 ## Authorization (JWT)
-Reading maps, locations and routes stays **public**. Only gallery management requires an `ADMIN` token.
+Reading maps, locations and routes stays **public**. Gallery and user management require an `ADMIN` token.
 Users are stored in the `users` table (migration V3); passwords are hashed with PBKDF2-HMAC-SHA256 + random salt.
 
 Env: `JWT_SECRET` (>= 32 chars; if unset a random one is generated, so tokens die on restart), `JWT_TTL_SECONDS` (default 3600),
@@ -72,9 +72,10 @@ Env: `JWT_SECRET` (>= 32 chars; if unset a random one is generated, so tokens di
 
 | Endpoint | Auth | Body -> Response |
 |---|---|---|
-| `POST /api/v1/auth/register` | - | `{username,password}` -> 201 `TokenResponse` (role USER); 409 `username_taken` |
+| `POST /api/v1/auth/register` | Bearer | `{username,password}` -> 201 `TokenResponse` (role USER); 409 `username_taken` |
 | `POST /api/v1/auth/login` | - | `{username,password}` -> `{token,expiresInSeconds,user}`; 401 `invalid_credentials` |
 | `GET /api/v1/auth/me` | Bearer | -> `{id,username,role}` |
+| `POST /api/v1/admin/users` | Bearer, ADMIN | `{username,password}` -> 201 `{id,username,role}` (role ADMIN); 409 `username_taken` |
 | `PUT /api/v1/admin/malls/{id}` | Bearer, ADMIN | `MallDto` (same shape as GET) -> 200/201; replaces the whole mall |
 | `DELETE /api/v1/admin/malls/{id}` | Bearer, ADMIN | -> 204; 404 if missing |
 

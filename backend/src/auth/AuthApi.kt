@@ -38,12 +38,13 @@ fun Application.installAuth(jwt: JwtService, users: UserRepository) {
 
 fun Route.authApi(users: UserRepository, jwt: JwtService) {
     route("${ApiPaths.PREFIX}/auth") {
-        post("register") {
-            val req = call.receive<CredentialsRequest>()
-            validate(req)
-            val user = users.create(req.username, PasswordHasher.hash(req.password))
-                ?: throw ApiException(HttpStatusCode.Conflict, "username_taken", "Username is already taken")
-            call.respond(HttpStatusCode.Created, tokenFor(user, jwt))
+        authenticate(JWT_AUTH) {
+            post("register") {
+                val req = call.receive<CredentialsRequest>()
+                validate(req)
+                val user = createUser(users, req, "USER")
+                call.respond(HttpStatusCode.Created, tokenFor(user, jwt))
+            }
         }
         post("login") {
             val req = call.receive<CredentialsRequest>()
@@ -67,8 +68,15 @@ fun Route.authApi(users: UserRepository, jwt: JwtService) {
 }
 
 /** Gallery management. Requires a valid token with role ADMIN. */
-fun Route.adminApi(catalog: MallCatalog, repository: MallRepository) {
+fun Route.adminApi(catalog: MallCatalog, repository: MallRepository, users: UserRepository) {
     authenticate(JWT_AUTH) {
+        post(ApiPaths.ADMIN_USERS) {
+            requireAdmin(call)
+            val req = call.receive<CredentialsRequest>()
+            validate(req)
+            val user = createUser(users, req, "ADMIN")
+            call.respond(HttpStatusCode.Created, UserDto(user.id, user.username, user.role))
+        }
         route(ApiPaths.ADMIN_MALLS) {
             // Creates a gallery; the server assigns the mall id and ids of stores sent with id <= 0
             post {
@@ -103,6 +111,10 @@ fun Route.adminApi(catalog: MallCatalog, repository: MallRepository) {
         }
     }
 }
+
+private fun createUser(users: UserRepository, req: CredentialsRequest, role: String): User =
+    users.create(req.username, PasswordHasher.hash(req.password), role)
+        ?: throw ApiException(HttpStatusCode.Conflict, "username_taken", "Username is already taken")
 
 private fun pathId(call: ApplicationCall): Long =
     call.parameters["mallId"]?.toLongOrNull()

@@ -150,6 +150,7 @@ object ApiPaths {
     const val LOGIN = "$PREFIX/auth/login"
     const val ME = "$PREFIX/auth/me"
     const val ADMIN_MALLS = "$PREFIX/admin/malls" // POST creates (server assigns ids), PUT/DELETE on /{id}
+    const val ADMIN_USERS = "$PREFIX/admin/users"
     fun adminMall(id: Long) = "$ADMIN_MALLS/$id"
     fun mall(id: Long) = "$MALLS/$id"
     fun locations(id: Long) = "${mall(id)}/locations"

@@ -111,6 +111,23 @@ private fun HomeSection(admin: AdminState, mapState: MapState) {
         enabled = focused != null,
         modifier = Modifier.fillMaxWidth()
     ) { Text("Edit this gallery") }
+
+    HorizontalDivider()
+    Text("Create administrator", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+    Field("Username", admin.newAdminUsername) { admin.newAdminUsername = it }
+    OutlinedTextField(
+        value = admin.newAdminPassword,
+        onValueChange = { admin.newAdminPassword = it },
+        label = { Text("Password") },
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Button(
+        onClick = { admin.createAdmin() },
+        enabled = !admin.busy && admin.newAdminUsername.isNotBlank() && admin.newAdminPassword.isNotEmpty(),
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("Create admin account") }
 }
 
 @Composable

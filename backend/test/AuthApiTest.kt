@@ -46,7 +46,15 @@ class AuthApiTest {
     @Test
     fun registerLoginAndMe() = testApplication {
         val c = client()
-        val reg = c.post(ApiPaths.REGISTER) { contentType(ContentType.Application.Json); setBody(CredentialsRequest("Alice", "password123")) }
+        val admin = c.token("boss", "super-secret-1")
+        val unauthorized = c.post(ApiPaths.REGISTER) {
+            contentType(ContentType.Application.Json); setBody(CredentialsRequest("Alice", "password123"))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, unauthorized.status)
+
+        val reg = c.post(ApiPaths.REGISTER) {
+            bearerAuth(admin); contentType(ContentType.Application.Json); setBody(CredentialsRequest("Alice", "password123"))
+        }
         assertEquals(HttpStatusCode.Created, reg.status)
         assertEquals("USER", reg.body<TokenResponse>().user.role)
 
@@ -55,7 +63,9 @@ class AuthApiTest {
         assertEquals(HttpStatusCode.OK, me.status)
         assertEquals("Alice", me.body<UserDto>().username)
 
-        val dup = c.post(ApiPaths.REGISTER) { contentType(ContentType.Application.Json); setBody(CredentialsRequest("ALICE", "password123")) }
+        val dup = c.post(ApiPaths.REGISTER) {
+            bearerAuth(admin); contentType(ContentType.Application.Json); setBody(CredentialsRequest("ALICE", "password123"))
+        }
         assertEquals(HttpStatusCode.Conflict, dup.status)
     }
 
@@ -66,7 +76,10 @@ class AuthApiTest {
         assertEquals(HttpStatusCode.Unauthorized, bad.status)
         val unknown = c.post(ApiPaths.LOGIN) { contentType(ContentType.Application.Json); setBody(CredentialsRequest("ghost", "whatever123")) }
         assertEquals(HttpStatusCode.Unauthorized, unknown.status)
-        val shortPw = c.post(ApiPaths.REGISTER) { contentType(ContentType.Application.Json); setBody(CredentialsRequest("bob", "short")) }
+        val admin = c.token("boss", "super-secret-1")
+        val shortPw = c.post(ApiPaths.REGISTER) {
+            bearerAuth(admin); contentType(ContentType.Application.Json); setBody(CredentialsRequest("bob", "short"))
+        }
         assertEquals(HttpStatusCode.BadRequest, shortPw.status)
         assertEquals(HttpStatusCode.Unauthorized, c.get(ApiPaths.ME).status)
         assertEquals(HttpStatusCode.Unauthorized, c.get(ApiPaths.ME) { bearerAuth("not.a.jwt") }.status)
@@ -101,17 +114,34 @@ class AuthApiTest {
     @Test
     fun adminEndpointsRequireAdminRole() = testApplication {
         val c = client()
+        val admin = c.token("boss", "super-secret-1")
         val body = c.get(ApiPaths.mall(1)).body<MallDto>()
 
         assertEquals(HttpStatusCode.Unauthorized, c.delete(ApiPaths.adminMall(2)).status)
+        assertEquals(HttpStatusCode.Unauthorized, c.post(ApiPaths.ADMIN_USERS) {
+            contentType(ContentType.Application.Json); setBody(CredentialsRequest("newboss", "password123"))
+        }.status)
 
-        c.post(ApiPaths.REGISTER) { contentType(ContentType.Application.Json); setBody(CredentialsRequest("plain", "password123")) }
+        val createdAdmin = c.post(ApiPaths.ADMIN_USERS) {
+            bearerAuth(admin); contentType(ContentType.Application.Json); setBody(CredentialsRequest("newboss", "password123"))
+        }
+        assertEquals(HttpStatusCode.Created, createdAdmin.status)
+        assertEquals("ADMIN", createdAdmin.body<UserDto>().role)
+        assertEquals("ADMIN", c.token("newboss", "password123").let {
+            c.get(ApiPaths.ME) { bearerAuth(it) }.body<UserDto>().role
+        })
+
+        c.post(ApiPaths.REGISTER) {
+            bearerAuth(admin); contentType(ContentType.Application.Json); setBody(CredentialsRequest("plain", "password123"))
+        }
         val userToken = c.token("plain", "password123")
+        assertEquals(HttpStatusCode.Forbidden, c.post(ApiPaths.ADMIN_USERS) {
+            bearerAuth(userToken); contentType(ContentType.Application.Json); setBody(CredentialsRequest("badboss", "password123"))
+        }.status)
         val forbidden = c.put(ApiPaths.adminMall(1)) { bearerAuth(userToken); contentType(ContentType.Application.Json); setBody(body) }
         assertEquals(HttpStatusCode.Forbidden, forbidden.status)
         assertEquals(HttpStatusCode.Forbidden, c.delete(ApiPaths.adminMall(2)) { bearerAuth(userToken) }.status)
 
-        val admin = c.token("boss", "super-secret-1")
         val renamed = body.copy(name = "Renamed by admin")
         assertEquals(HttpStatusCode.OK, c.put(ApiPaths.adminMall(1)) { bearerAuth(admin); contentType(ContentType.Application.Json); setBody(renamed) }.status)
         assertEquals("Renamed by admin", c.get(ApiPaths.mall(1)).body<MallDto>().name)
@@ -155,4 +185,3 @@ class AuthApiTest {
         }
         assertEquals(HttpStatusCode.BadRequest, blank.status)
     }}
-

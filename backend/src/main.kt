@@ -47,7 +47,7 @@ fun Application.module(
     routing {
         indoorApi(catalog, routingService, outdoorService)
         authApi(users, jwt)
-        adminApi(catalog, malls)
+        adminApi(catalog, malls, users)
     }
 }
 

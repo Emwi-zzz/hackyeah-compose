@@ -62,6 +62,8 @@ class AdminState(
     var storeName by mutableStateOf("")
     var storeCategory by mutableStateOf("Retail")
     var entranceName by mutableStateOf("")
+    var newAdminUsername by mutableStateOf("")
+    var newAdminPassword by mutableStateOf("")
 
     private var tempId = 0L
     private var pendingEscalator by mutableStateOf<PendingEscalator?>(null)
@@ -129,6 +131,24 @@ class AdminState(
         discard()
         session = null
         message = null
+    }
+
+    fun createAdmin() {
+        val currentSession = session ?: return fail("Sign in as an administrator first")
+        if (newAdminUsername.isBlank() || newAdminPassword.isEmpty()) {
+            return fail("Enter username and password")
+        }
+        scope.launch {
+            busy = true
+            client.createAdmin(currentSession.token, newAdminUsername.trim(), newAdminPassword)
+                .onSuccess { user ->
+                    newAdminUsername = ""
+                    newAdminPassword = ""
+                    ok("Administrator '${user.username}' created")
+                }
+                .onFailure(::handleFailure)
+            busy = false
+        }
     }
 
     // ---- creating / editing --------------------------------------------------------------

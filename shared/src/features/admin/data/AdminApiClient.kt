@@ -18,6 +18,14 @@ class AdminApiClient(private val baseUrl: () -> String = { BackendConfig.baseUrl
         send("POST", ApiPaths.LOGIN, null, json.encodeToString(CredentialsRequest.serializer(), CredentialsRequest(username, password)))
             .mapCatching { json.decodeFromString(TokenResponse.serializer(), it) }
 
+    suspend fun createAdmin(token: String, username: String, password: String): Result<UserDto> =
+        send(
+            "POST",
+            ApiPaths.ADMIN_USERS,
+            token,
+            json.encodeToString(CredentialsRequest.serializer(), CredentialsRequest(username, password))
+        ).mapCatching { json.decodeFromString(UserDto.serializer(), it) }
+
     /** Creates a mall; the server assigns ids. Returns the new mall id. */
     suspend fun createMall(token: String, mall: MallDto): Result<Long> =
         send("POST", ApiPaths.ADMIN_MALLS, token, json.encodeToString(MallDto.serializer(), mall)).mapCatching(::readId)
