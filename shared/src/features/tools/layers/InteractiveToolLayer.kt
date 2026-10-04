@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import core.geometry.GeoMath
 import core.geometry.GeoPoint
+import core.ui.AppColors
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
 import features.tools.domain.ToolController
@@ -91,17 +92,24 @@ class InteractiveToolLayer(
         if (measurer != null) {
             val textLayout = measurer.measure(
                 text = pin.name,
-                style = TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                style = TextStyle(color = AppColors.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             )
             val pillW = textLayout.size.width + 12f
             val pillH = textLayout.size.height + 4f
             val topLeft = Offset(screenPos.x - pillW / 2f, screenPos.y - 20f - pillH)
 
             context.drawScope.drawRoundRect(
-                color = Color(0xDD1E293B),
+                color = AppColors.Surface,
                 topLeft = topLeft,
                 size = Size(pillW, pillH),
                 cornerRadius = CornerRadius(4f, 4f)
+            )
+            context.drawScope.drawRoundRect(
+                color = AppColors.BorderStrong,
+                topLeft = topLeft,
+                size = Size(pillW, pillH),
+                cornerRadius = CornerRadius(4f, 4f),
+                style = Stroke(width = 1f)
             )
             context.drawScope.drawText(
                 textLayoutResult = textLayout,
@@ -166,7 +174,7 @@ class InteractiveToolLayer(
             val tl = Offset(mid.x - w / 2f, mid.y - h / 2f)
 
             context.drawScope.drawRoundRect(
-                color = Color(0xEE2563EB),
+                color = AppColors.AccentStrong.copy(alpha = 0.93f),
                 topLeft = tl,
                 size = Size(w, h),
                 cornerRadius = CornerRadius(4f, 4f)
@@ -319,14 +327,14 @@ class InteractiveToolLayer(
             if (statsText.isNotEmpty()) {
                 val layout = measurer.measure(
                     text = statsText,
-                    style = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(color = AppColors.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 )
                 val w = layout.size.width + 16f
                 val h = layout.size.height + 8f
                 val tl = Offset(lastPoint.x + 16f, lastPoint.y + 16f)
 
                 context.drawScope.drawRoundRect(
-                    color = Color(0xF00F172A),
+                    color = AppColors.Surface,
                     topLeft = tl,
                     size = Size(w, h),
                     cornerRadius = CornerRadius(6f, 6f)

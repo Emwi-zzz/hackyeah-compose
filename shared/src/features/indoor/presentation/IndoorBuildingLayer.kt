@@ -11,6 +11,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import core.ui.AppColors
 import features.indoor.domain.IndoorRoute
 import features.rendering.domain.MapLayer
 import features.rendering.domain.RenderContext
@@ -112,29 +113,29 @@ class IndoorBuildingLayer(
                 // Drop shadow under outline
                 context.drawScope.drawPath(
                     path = footprintPath,
-                    color = Color.Black.copy(alpha = 0.15f * opacity),
-                    style = Stroke(width = if (isFocused) 5f else 3f)
+                    color = Color.Black.copy(alpha = 0.4f * opacity),
+                    style = Stroke(width = if (isFocused) 6f else 4f)
                 )
 
                 // Building footprint fill
                 context.drawScope.drawPath(
                     path = footprintPath,
-                    color = (if (isFocused) Color(0xFFEFF6FF) else Color(0xFFF1F5F9)).copy(alpha = opacity),
+                    color = (if (isFocused) Color(0xFF1E2A44) else Color(0xFF1A2130)).copy(alpha = opacity),
                     style = Fill
                 )
 
                 // Building outline stroke
                 context.drawScope.drawPath(
                     path = footprintPath,
-                    color = (if (isFocused) Color(0xFF2563EB) else Color(0xFF64748B)).copy(alpha = opacity),
-                    style = Stroke(width = if (isFocused) 3.5f else 2.2f)
+                    color = if (isFocused) AppColors.Accent.copy(alpha = opacity) else Color.White.copy(alpha = 0.22f * opacity),
+                    style = Stroke(width = if (isFocused) 2.5f else 1.5f)
                 )
 
                 // Outer entry points on outline
                 for (entry in curMall.entryPoints) {
                     val sp = mapToScreen(entry)
                     context.drawScope.drawCircle(
-                        color = Color(0xFF2563EB).copy(alpha = opacity),
+                        color = AppColors.Accent.copy(alpha = opacity),
                         radius = 4.5f,
                         center = sp
                     )
@@ -153,7 +154,7 @@ class IndoorBuildingLayer(
                     val labelLayout = measurer.measure(
                         text = labelText,
                         style = TextStyle(
-                            color = if (isFocused) Color(0xFF1E3A8A) else Color(0xFF334155),
+                            color = if (isFocused) AppColors.TextPrimary else AppColors.TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -163,13 +164,13 @@ class IndoorBuildingLayer(
                     val tl = Offset(centerScreen.x - pillW / 2f, centerScreen.y - pillH / 2f)
 
                     context.drawScope.drawRoundRect(
-                        color = Color.White.copy(alpha = 0.95f * opacity),
+                        color = AppColors.Surface.copy(alpha = 0.95f * opacity),
                         topLeft = tl,
                         size = Size(pillW, pillH),
                         cornerRadius = CornerRadius(6f, 6f)
                     )
                     context.drawScope.drawRoundRect(
-                        color = (if (isFocused) Color(0xFF2563EB) else Color(0xFF94A3B8)).copy(alpha = opacity),
+                        color = if (isFocused) AppColors.Accent.copy(alpha = opacity) else AppColors.BorderStrong.copy(alpha = AppColors.BorderStrong.alpha * opacity),
                         topLeft = tl,
                         size = Size(pillW, pillH),
                         cornerRadius = CornerRadius(6f, 6f),
@@ -187,18 +188,18 @@ class IndoorBuildingLayer(
             // 1. Draw Building Outer Footprint
             context.drawScope.drawPath(
                 path = floorBoxPath,
-                color = Color.Black.copy(alpha = 0.25f * opacity),
-                style = Stroke(width = 6f)
+                color = Color.Black.copy(alpha = 0.45f * opacity),
+                style = Stroke(width = 8f)
             )
             context.drawScope.drawPath(
                 path = floorBoxPath,
-                color = Color(0xFFF8FAFC).copy(alpha = opacity),
+                color = Color(0xFF1C2433).copy(alpha = opacity),
                 style = Fill
             )
             context.drawScope.drawPath(
                 path = floorBoxPath,
-                color = Color(0xFF0F172A).copy(alpha = opacity),
-                style = Stroke(width = 3.5f)
+                color = Color.White.copy(alpha = 0.2f * opacity),
+                style = Stroke(width = 2f)
             )
 
             // 2. Blocked areas: atria / escalator wells open to the floor below, edged by a railing
@@ -206,13 +207,13 @@ class IndoorBuildingLayer(
                 val voidPath = pathToScreen(void)
                 context.drawScope.drawPath(
                     path = voidPath,
-                    color = Color(0xFFDBEAFE).copy(alpha = opacity),
+                    color = AppColors.Background.copy(alpha = 0.9f * opacity),
                     style = Fill
                 )
                 context.drawScope.drawPath(
                     path = voidPath,
-                    color = Color(0xFF64748B).copy(alpha = opacity),
-                    style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+                    color = Color.White.copy(alpha = 0.18f * opacity),
+                    style = Stroke(width = 1.2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
                 )
             }
 
@@ -224,12 +225,19 @@ class IndoorBuildingLayer(
                 val fillColor = ShopColorGenerator.colorForShopId(store.Shopid, isSelected)
                 val wallColor = ShopColorGenerator.wallColorForShopId(store.Shopid, isSelected)
 
+                if (isSelected) {
+                    context.drawScope.drawPath(
+                        path = storePath,
+                        color = AppColors.Accent.copy(alpha = 0.3f * opacity),
+                        style = Stroke(width = 9f, join = StrokeJoin.Round)
+                    )
+                }
                 context.drawScope.drawPath(
                     path = storePath,
                     color = fillColor.copy(alpha = opacity),
                     style = Fill
                 )
-                val wallWidth = if (isSelected) 3f else 1.5f
+                val wallWidth = if (isSelected) 2.5f else 1.2f
                 context.drawScope.drawPath(
                     path = storePath,
                     color = wallColor.copy(alpha = opacity),
@@ -240,12 +248,12 @@ class IndoorBuildingLayer(
                 for (entry in store.entryPoints) {
                     val sp = mapToScreen(entry)
                     context.drawScope.drawCircle(
-                        color = Color(0xFF10B981).copy(alpha = opacity),
+                        color = AppColors.Success.copy(alpha = opacity),
                         radius = 3.5f,
                         center = sp
                     )
                     context.drawScope.drawCircle(
-                        color = Color.White.copy(alpha = opacity),
+                        color = AppColors.Background.copy(alpha = opacity),
                         radius = 1.5f,
                         center = sp
                     )
@@ -261,7 +269,7 @@ class IndoorBuildingLayer(
                     val textLayout = measurer.measure(
                         text = store.name,
                         style = TextStyle(
-                            color = Color(0xFF0F172A),
+                            color = AppColors.TextPrimary,
                             fontSize = labelFontSize,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                         )
@@ -277,11 +285,20 @@ class IndoorBuildingLayer(
                     val textTopLeft = Offset(centerScreen.x - textW / 2f, centerScreen.y - textH / 2f)
 
                     context.drawScope.drawRoundRect(
-                        color = Color.White.copy(alpha = 0.85f * opacity),
+                        color = AppColors.Surface.copy(alpha = 0.82f * opacity),
                         topLeft = Offset(textTopLeft.x - 4f, textTopLeft.y - 2f),
                         size = Size(textW + 8f, textH + 4f),
                         cornerRadius = CornerRadius(4f, 4f)
                     )
+                    if (isSelected) {
+                        context.drawScope.drawRoundRect(
+                            color = AppColors.Accent.copy(alpha = opacity),
+                            topLeft = Offset(textTopLeft.x - 4f, textTopLeft.y - 2f),
+                            size = Size(textW + 8f, textH + 4f),
+                            cornerRadius = CornerRadius(4f, 4f),
+                            style = Stroke(width = 1f)
+                        )
+                    }
                     context.drawScope.drawText(
                         textLayoutResult = textLayout,
                         topLeft = textTopLeft
@@ -295,13 +312,13 @@ class IndoorBuildingLayer(
                 val elevatorSize = 22f
 
                 context.drawScope.drawRoundRect(
-                    color = Color(0xFF334155).copy(alpha = opacity),
+                    color = Color(0xFF8B5CF6).copy(alpha = opacity),
                     topLeft = Offset(sp.x - elevatorSize / 2f, sp.y - elevatorSize / 2f),
                     size = Size(elevatorSize, elevatorSize),
                     cornerRadius = CornerRadius(4f, 4f)
                 )
                 context.drawScope.drawRoundRect(
-                    color = Color.White.copy(alpha = opacity),
+                    color = Color.White.copy(alpha = 0.9f * opacity),
                     topLeft = Offset(sp.x - elevatorSize / 2f, sp.y - elevatorSize / 2f),
                     size = Size(elevatorSize, elevatorSize),
                     cornerRadius = CornerRadius(4f, 4f),
@@ -326,7 +343,7 @@ class IndoorBuildingLayer(
                 val width = 28f
                 val height = 18f
                 val isUp = escalator.direction == EscalatorDirection.UP
-                val bg = if (isUp) Color(0xFF059669) else Color(0xFFD97706)
+                val bg = if (isUp) Color(0xFF10B981) else Color(0xFFF59E0B)
 
                 context.drawScope.drawRoundRect(
                     color = bg.copy(alpha = 0.95f * opacity),
@@ -335,7 +352,7 @@ class IndoorBuildingLayer(
                     cornerRadius = CornerRadius(4f, 4f)
                 )
                 context.drawScope.drawRoundRect(
-                    color = Color.White.copy(alpha = opacity),
+                    color = Color.White.copy(alpha = 0.9f * opacity),
                     topLeft = Offset(sp.x - width / 2f, sp.y - height / 2f),
                     size = Size(width, height),
                     cornerRadius = CornerRadius(4f, 4f),
@@ -347,7 +364,7 @@ class IndoorBuildingLayer(
                     val layout = measurer.measure(
                         text = dirText,
                         style = TextStyle(
-                            color = Color.White,
+                            color = AppColors.Background,
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -365,15 +382,15 @@ class IndoorBuildingLayer(
                     val step = if (escalator.direction == EscalatorDirection.UP) 1 else -1
                     if (source.number + step != floor.number) continue
                     val sp = mapToScreen(escalator.exitCoordinates)
-                    val bg = if (step > 0) Color(0xFF059669) else Color(0xFFD97706)
+                    val bg = if (step > 0) Color(0xFF10B981) else Color(0xFFF59E0B)
                     context.drawScope.drawCircle(color = bg.copy(alpha = 0.95f * opacity), radius = 9f, center = sp)
                     context.drawScope.drawCircle(
-                        color = Color.White.copy(alpha = opacity), radius = 9f, center = sp, style = Stroke(width = 1.5f)
+                        color = Color.White.copy(alpha = 0.9f * opacity), radius = 9f, center = sp, style = Stroke(width = 1.5f)
                     )
                     if (measurer != null) {
                         val layout = measurer.measure(
                             text = "⇲",
-                            style = TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            style = TextStyle(color = AppColors.Background, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         )
                         context.drawScope.drawText(
                             textLayoutResult = layout,
@@ -387,7 +404,12 @@ class IndoorBuildingLayer(
             for (entry in curMall.entryPoints) {
                 val sp = mapToScreen(entry)
                 context.drawScope.drawCircle(
-                    color = Color(0xFF2563EB).copy(alpha = opacity),
+                    color = AppColors.Background.copy(alpha = 0.8f * opacity),
+                    radius = 8.5f,
+                    center = sp
+                )
+                context.drawScope.drawCircle(
+                    color = AppColors.Accent.copy(alpha = opacity),
                     radius = 7f,
                     center = sp
                 )
@@ -405,7 +427,7 @@ class IndoorBuildingLayer(
                 val layout = measurer.measure(
                     text = headerText,
                     style = TextStyle(
-                        color = Color.White,
+                        color = AppColors.TextPrimary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -415,10 +437,17 @@ class IndoorBuildingLayer(
                 val topLeft = Offset(topCenter.x - pillW / 2f, topCenter.y - pillH - 6f)
 
                 context.drawScope.drawRoundRect(
-                    color = Color(0xEE0F172A),
+                    color = AppColors.Surface,
                     topLeft = topLeft,
                     size = Size(pillW, pillH),
                     cornerRadius = CornerRadius(6f, 6f)
+                )
+                context.drawScope.drawRoundRect(
+                    color = AppColors.BorderStrong,
+                    topLeft = topLeft,
+                    size = Size(pillW, pillH),
+                    cornerRadius = CornerRadius(6f, 6f),
+                    style = Stroke(width = 1f)
                 )
                 context.drawScope.drawText(
                     textLayoutResult = layout,
@@ -436,14 +465,21 @@ class IndoorBuildingLayer(
                     // 8a. Outer glowing halo / aura
                     context.drawScope.drawPath(
                         path = routePath,
-                        color = Color(0x553B82F6).copy(alpha = opacity),
-                        style = Stroke(width = 14f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                        color = AppColors.Accent.copy(alpha = 0.25f * opacity),
+                        style = Stroke(width = 16f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
+
+                    // Dark casing so the route separates from shop fills
+                    context.drawScope.drawPath(
+                        path = routePath,
+                        color = AppColors.Background.copy(alpha = 0.85f * opacity),
+                        style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
 
                     // 8b. Core vibrant navigation curve
                     context.drawScope.drawPath(
                         path = routePath,
-                        color = Color(0xFF2563EB).copy(alpha = opacity),
+                        color = AppColors.Accent.copy(alpha = opacity),
                         style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
 
@@ -451,9 +487,9 @@ class IndoorBuildingLayer(
                     val phase = ((context.frameTimeNanos / 20_000_000L) % 36).toFloat()
                     context.drawScope.drawPath(
                         path = routePath,
-                        color = Color(0xFF67E8F9).copy(alpha = opacity),
+                        color = Color(0xFFC7D7FF).copy(alpha = 0.9f * opacity),
                         style = Stroke(
-                            width = 3f,
+                            width = 2.5f,
                             cap = StrokeCap.Round,
                             join = StrokeJoin.Round,
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 18f), -phase)
@@ -465,12 +501,12 @@ class IndoorBuildingLayer(
                         val sp = mapToScreen(route.startLocation.coordinates)
                         val pulse = (kotlin.math.sin(context.frameTimeNanos / 200_000_000.0) * 3f + 12f).toFloat()
                         context.drawScope.drawCircle(
-                            color = Color(0x4410B981).copy(alpha = opacity),
+                            color = AppColors.Success.copy(alpha = 0.27f * opacity),
                             radius = pulse,
                             center = sp
                         )
                         context.drawScope.drawCircle(
-                            color = Color(0xFF10B981).copy(alpha = opacity),
+                            color = AppColors.Success.copy(alpha = opacity),
                             radius = 8f,
                             center = sp
                         )
@@ -484,7 +520,7 @@ class IndoorBuildingLayer(
                             val layout = measurer.measure(
                                 text = "🟢 START: ${route.startLocation.name}",
                                 style = TextStyle(
-                                    color = Color(0xFF065F46),
+                                    color = AppColors.TextPrimary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -493,13 +529,13 @@ class IndoorBuildingLayer(
                             val pillH = layout.size.height + 6f
                             val tl = Offset(sp.x - pillW / 2f, sp.y - pillH - 12f)
                             context.drawScope.drawRoundRect(
-                                color = Color(0xF0ECFDF5).copy(alpha = opacity),
+                                color = AppColors.Surface.copy(alpha = 0.95f * opacity),
                                 topLeft = tl,
                                 size = Size(pillW, pillH),
                                 cornerRadius = CornerRadius(4f, 4f)
                             )
                             context.drawScope.drawRoundRect(
-                                color = Color(0xFF10B981).copy(alpha = opacity),
+                                color = AppColors.Success.copy(alpha = opacity),
                                 topLeft = tl,
                                 size = Size(pillW, pillH),
                                 cornerRadius = CornerRadius(4f, 4f),
@@ -517,12 +553,12 @@ class IndoorBuildingLayer(
                         val sp = mapToScreen(route.endLocation.coordinates)
                         val pulse = (kotlin.math.cos(context.frameTimeNanos / 200_000_000.0) * 3f + 12f).toFloat()
                         context.drawScope.drawCircle(
-                            color = Color(0x44EF4444).copy(alpha = opacity),
+                            color = AppColors.Danger.copy(alpha = 0.27f * opacity),
                             radius = pulse,
                             center = sp
                         )
                         context.drawScope.drawCircle(
-                            color = Color(0xFFEF4444).copy(alpha = opacity),
+                            color = AppColors.Danger.copy(alpha = opacity),
                             radius = 8f,
                             center = sp
                         )
@@ -536,7 +572,7 @@ class IndoorBuildingLayer(
                             val layout = measurer.measure(
                                 text = "🏁 END: ${route.endLocation.name}",
                                 style = TextStyle(
-                                    color = Color(0xFF991B1B),
+                                    color = AppColors.TextPrimary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -545,13 +581,13 @@ class IndoorBuildingLayer(
                             val pillH = layout.size.height + 6f
                             val tl = Offset(sp.x - pillW / 2f, sp.y - pillH - 12f)
                             context.drawScope.drawRoundRect(
-                                color = Color(0xF0FEF2F2).copy(alpha = opacity),
+                                color = AppColors.Surface.copy(alpha = 0.95f * opacity),
                                 topLeft = tl,
                                 size = Size(pillW, pillH),
                                 cornerRadius = CornerRadius(4f, 4f)
                             )
                             context.drawScope.drawRoundRect(
-                                color = Color(0xFFEF4444).copy(alpha = opacity),
+                                color = AppColors.Danger.copy(alpha = opacity),
                                 topLeft = tl,
                                 size = Size(pillW, pillH),
                                 cornerRadius = CornerRadius(4f, 4f),
@@ -573,7 +609,7 @@ class IndoorBuildingLayer(
                             val layout = measurer.measure(
                                 text = "⚡ $instruction",
                                 style = TextStyle(
-                                    color = Color.White,
+                                    color = AppColors.OnAccent,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -582,7 +618,7 @@ class IndoorBuildingLayer(
                             val pillH = layout.size.height + 6f
                             val tl = Offset(sp.x - pillW / 2f, sp.y + 14f)
                             context.drawScope.drawRoundRect(
-                                color = Color(0xEE1E40AF).copy(alpha = opacity),
+                                color = AppColors.AccentStrong.copy(alpha = 0.93f * opacity),
                                 topLeft = tl,
                                 size = Size(pillW, pillH),
                                 cornerRadius = CornerRadius(6f, 6f)

@@ -4,17 +4,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import core.geometry.GeoPoint
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 
 data class PresetLocation(
@@ -51,21 +53,23 @@ fun PresetLocationsBar(
     ) {
         for (preset in KRAKOW_PRESETS) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White.copy(alpha = 0.95f),
+                shape = AppShapes.Pill,
+                color = AppColors.Surface,
+                border = AppBorder,
                 shadowElevation = 3.dp,
-                tonalElevation = 1.dp,
-                modifier = Modifier.clickable {
-                    val matchingMall = mapState.malls.find {
-                        it.name.contains(preset.name.substringBefore(" (Indoor)"), ignoreCase = true)
+                modifier = Modifier
+                    .clip(AppShapes.Pill)
+                    .clickable {
+                        val matchingMall = mapState.malls.find {
+                            it.name.contains(preset.name.substringBefore(" (Indoor)"), ignoreCase = true)
+                        }
+                        if (matchingMall != null) {
+                            mapState.refocusOnMall(matchingMall)
+                            mapState.isIndoorNavigationOpen = true
+                        } else {
+                            mapState.flyTo(preset.point, preset.zoom)
+                        }
                     }
-                    if (matchingMall != null) {
-                        mapState.refocusOnMall(matchingMall)
-                        mapState.isIndoorNavigationOpen = true
-                    } else {
-                        mapState.flyTo(preset.point, preset.zoom)
-                    }
-                }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -77,7 +81,7 @@ fun PresetLocationsBar(
                         preset.name,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1E293B)
+                        color = AppColors.TextPrimary
                     )
                 }
             }

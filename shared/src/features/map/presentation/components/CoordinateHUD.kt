@@ -1,20 +1,20 @@
 package features.map.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import core.geometry.GeoPoint
 import core.geometry.WebMercatorProjection
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 import kotlin.math.roundToInt
 
@@ -43,8 +43,9 @@ fun CoordinateHUD(
     } else null
 
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xCC0F172A),
+        shape = AppShapes.Control,
+        color = AppColors.Surface,
+        border = AppBorder,
         modifier = modifier
     ) {
         Row(
@@ -54,15 +55,15 @@ fun CoordinateHUD(
         ) {
             // Zoom indicator
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Zoom:", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                Text("Zoom:", fontSize = 10.sp, color = AppColors.TextMuted)
                 val zoomStr = ((zoom * 10.0).roundToInt() / 10.0).toString()
-                Text(zoomStr, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(zoomStr, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
             }
 
             // Tile coordinate indicator
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Tile:", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                Text("$zInt / $centerTileX / $centerTileY", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                Text("Tile:", fontSize = 10.sp, color = AppColors.TextMuted)
+                Text("$zInt / $centerTileX / $centerTileY", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary)
             }
 
             // Coordinates (hovered or center)
@@ -71,15 +72,15 @@ fun CoordinateHUD(
             val lonStr = ((displayGeo.longitude * 100000.0).roundToInt() / 100000.0).toString()
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(if (hoveredGeo != null) "Cursor:" else "Center:", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                Text("$latStr° N, $lonStr° E", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF38BDF8))
+                Text(if (hoveredGeo != null) "Cursor:" else "Center:", fontSize = 10.sp, color = AppColors.TextMuted)
+                Text("$latStr° N, $lonStr° E", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Accent)
             }
 
             // Attribution
             Text(
                 text = mapState.activeTileSource.attribution,
                 fontSize = 9.sp,
-                color = Color(0xFFCBD5E1)
+                color = AppColors.TextSecondary
             )
         }
     }

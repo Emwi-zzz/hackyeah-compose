@@ -1,9 +1,7 @@
 package features.tools.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,6 +11,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.tools.domain.ToolController
 import features.tools.domain.ToolMode
 
@@ -22,10 +23,10 @@ fun ToolPaletteBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White.copy(alpha = 0.95f),
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        border = AppBorder,
         shadowElevation = 6.dp,
-        tonalElevation = 2.dp,
         modifier = modifier
     ) {
         Column(
@@ -40,10 +41,10 @@ fun ToolPaletteBar(
                     val isSelected = toolController.activeMode == mode
 
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) Color(0xFF2563EB) else Color.Transparent,
+                        shape = AppShapes.Control,
+                        color = if (isSelected) AppColors.Accent else Color.Transparent,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppShapes.Control)
                             .clickable { toolController.selectMode(mode) }
                     ) {
                         Row(
@@ -63,8 +64,8 @@ fun ToolPaletteBar(
                             Text(
                                 text = mode.title,
                                 fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) Color.White else Color(0xFF334155)
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (isSelected) AppColors.OnAccent else AppColors.TextSecondary
                             )
                         }
                     }
@@ -73,7 +74,7 @@ fun ToolPaletteBar(
 
             // Draft actions bar (shown when drafting points or geometries exist)
             if (toolController.draftPoints.isNotEmpty() || toolController.geometries.isNotEmpty()) {
-                HorizontalDivider(color = Color(0xFFE2E8F0))
+                HorizontalDivider(color = AppColors.Border)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
@@ -85,24 +86,33 @@ fun ToolPaletteBar(
                             text = "Points: ${toolController.draftPoints.size}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF0F172A)
+                            color = AppColors.TextPrimary
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             // Undo button
                             Button(
                                 onClick = { toolController.undoLastPoint() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF64748B)),
+                                shape = AppShapes.Control,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.SurfaceRaised,
+                                    contentColor = AppColors.TextPrimary
+                                ),
+                                border = AppBorder,
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
-                                Text("Undo", fontSize = 10.sp)
+                                Text("Undo", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                             }
 
                             // Finish shape button
                             Button(
                                 onClick = { toolController.finishCurrentShape() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                shape = AppShapes.Control,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.SuccessSoft,
+                                    contentColor = AppColors.Success
+                                ),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
@@ -112,27 +122,36 @@ fun ToolPaletteBar(
                             // Cancel button
                             Button(
                                 onClick = { toolController.cancelDraft() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                shape = AppShapes.Control,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.DangerSoft,
+                                    contentColor = AppColors.Danger
+                                ),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
-                                Text("Cancel", fontSize = 10.sp)
+                                Text("Cancel", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     } else if (toolController.geometries.isNotEmpty()) {
                         Text(
                             text = "Rendered: ${toolController.geometries.size} custom shape(s)",
                             fontSize = 11.sp,
-                            color = Color(0xFF475569)
+                            color = AppColors.TextSecondary
                         )
 
                         Button(
                             onClick = { toolController.clearAll() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF94A3B8)),
+                            shape = AppShapes.Control,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.SurfaceRaised,
+                                contentColor = AppColors.TextPrimary
+                            ),
+                            border = AppBorder,
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                             modifier = Modifier.height(26.dp)
                         ) {
-                            Text("Clear All", fontSize = 10.sp)
+                            Text("Clear All", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

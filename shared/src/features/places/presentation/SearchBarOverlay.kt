@@ -1,6 +1,5 @@
 package features.places.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,11 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import core.ui.AppBorder
+import core.ui.AppColors
+import core.ui.AppShapes
 import features.map.presentation.MapState
 import features.places.domain.Place
 import features.places.domain.PlacesRepository
@@ -36,12 +37,11 @@ fun SearchBarOverlay(
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
     Surface(
-        modifier = modifier
-            .width(360.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        color = Color.White.copy(alpha = 0.96f),
-        shadowElevation = 8.dp,
-        tonalElevation = 2.dp
+        modifier = modifier.width(360.dp),
+        shape = AppShapes.Card,
+        color = AppColors.Surface,
+        border = AppBorder,
+        shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier.padding(8.dp)
@@ -72,14 +72,17 @@ fun SearchBarOverlay(
                         }
                     },
                     placeholder = {
-                        Text("Search places in Kraków (e.g. Wawel, Rynek)", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                        Text("Search places in Kraków (e.g. Wawel, Rynek)", fontSize = 13.sp, color = AppColors.TextMuted)
                     },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = AppColors.TextPrimary,
+                        unfocusedTextColor = AppColors.TextPrimary,
+                        cursorColor = AppColors.Accent
                     ),
                     modifier = Modifier.weight(1f)
                 )
@@ -93,7 +96,7 @@ fun SearchBarOverlay(
                         },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Text("✕", fontSize = 12.sp, color = Color.Gray)
+                        Text("✕", fontSize = 12.sp, color = AppColors.TextMuted)
                     }
                 }
             }
@@ -101,13 +104,13 @@ fun SearchBarOverlay(
             if (isSearching) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().height(2.dp),
-                    color = Color(0xFF2563EB)
+                    color = AppColors.Accent
                 )
             }
 
             // Results list
             if (isExpanded && results.isNotEmpty()) {
-                HorizontalDivider(color = Color(0xFFE2E8F0), modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = AppColors.Border, modifier = Modifier.padding(vertical = 4.dp))
 
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 260.dp),
@@ -115,8 +118,8 @@ fun SearchBarOverlay(
                 ) {
                     items(results) { place ->
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFF8FAFC),
+                            shape = AppShapes.Control,
+                            color = AppColors.SurfaceRaised,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -131,8 +134,8 @@ fun SearchBarOverlay(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = place.categoryColor.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = place.categoryColor.copy(alpha = 0.2f),
                                     modifier = Modifier.size(28.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -145,12 +148,12 @@ fun SearchBarOverlay(
                                         text = place.name,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 12.sp,
-                                        color = Color(0xFF1E293B)
+                                        color = AppColors.TextPrimary
                                     )
                                     Text(
                                         text = place.description,
                                         fontSize = 10.sp,
-                                        color = Color(0xFF64748B),
+                                        color = AppColors.TextMuted,
                                         maxLines = 1
                                     )
                                 }

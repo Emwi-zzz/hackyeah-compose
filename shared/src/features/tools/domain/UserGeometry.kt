@@ -33,8 +33,8 @@ sealed interface UserGeometry {
         override val id: String,
         override val name: String,
         val points: List<GeoPoint>,
-        val fillColor: Color = Color(0x3310B981),
-        val strokeColor: Color = Color(0xFF059669),
+        val fillColor: Color = Color(0x3334D399),
+        val strokeColor: Color = Color(0xFF34D399),
         val strokeWidthDp: Float = 2.5f
     ) : UserGeometry {
         val totalAreaSquareMeters: Double
